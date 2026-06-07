@@ -13,14 +13,19 @@ CityBench / Urban Master Planner prototype.
 - 1,000점 5축 평가: 경제, 교통, 환경, 주거, 도시구조
 - 목적 적합 보너스, 이벤트 점수, 난이도 계수
 - PNG 마스터플랜 렌더링
+- 위성지도/지형도 스타일의 상세 지형 렌더링
+- 제출물 하드 게이트 검증기
 
 ## 빠른 실행
 
 ```powershell
 python terrain_gen.py lake_core "Financial Capital" 3 terrain_lake_core.json
 python make_fitted.py
+python validate.py terrain_lake_core.json submission_lakecore3.json
 python score_v2.py terrain_lake_core.json submission_lakecore3.json
 python render2.py terrain_lake_core.json submission_lakecore3.json plan_v04.png
+python render_terrain.py terrain_lake_core.json terrain_lake_core_detailed.png
+python preview_terrains.py terrain_preview_v04.png
 ```
 
 `terrain_gen.py`와 `render2.py`는 SciPy/Matplotlib이 없어도 fallback으로 동작합니다. 기본적으로는 `numpy`와 `Pillow`가 필요합니다.
@@ -31,8 +36,12 @@ python render2.py terrain_lake_core.json submission_lakecore3.json plan_v04.png
 - `score_v2.py`: 채점기 본체
 - `geometry.py`: 벡터 폴리곤/폴리라인 래스터화 유틸
 - `render2.py`: 마스터플랜 렌더러
+- `render_terrain.py`: 상세 지형 전용 렌더러
+- `preview_terrains.py`: 5개 지형 미리보기 몽타주 생성기
+- `validate.py`: 제출물 하드 게이트 검증기
 - `make_fitted.py`: Lake Core 데모 제출물 생성기
 - `HANDOFF.md`: 인수인계 메모
+- `PROJECT_STATUS.md`: 진행 상태와 남은 작업 체크리스트
 
 ## 지형 타입
 
@@ -63,3 +72,4 @@ python render2.py terrain_lake_core.json submission_lakecore3.json plan_v04.png
 - 목적별 reference solution
 - 5지형 x 5목적 밸런스 테스트
 - 웹 UI 또는 비교 대시보드
+- 실제 GIS/OSM/DEM 데이터 파이프라인
