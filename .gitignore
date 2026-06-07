@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.env
+.DS_Store
+Thumbs.db
+
+# Local scratch renders. Keep named reference images explicitly if needed.
+plan.png
+

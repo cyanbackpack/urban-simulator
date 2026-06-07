@@ -1,0 +1,7 @@
+numpy>=2.0
+Pillow>=10.0
+
+# Optional quality/runtime dependencies:
+# scipy
+# matplotlib
+# scikit-image
