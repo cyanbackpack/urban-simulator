@@ -1,4 +1,6 @@
-# CityBench / Urban Master Planner Prototype
+# urban-simulator
+
+CityBench / Urban Master Planner prototype.
 
 도시설계 벤치마크 플랫폼 프로토타입입니다. 참가자는 지형 위에 도시를 벡터 데이터로 설계하고, 정적·결정론적 채점기가 점수와 등급을 계산합니다.
 
@@ -61,4 +63,3 @@ python render2.py terrain_lake_core.json submission_lakecore3.json plan_v04.png
 - 목적별 reference solution
 - 5지형 x 5목적 밸런스 테스트
 - 웹 UI 또는 비교 대시보드
-
