@@ -14,6 +14,10 @@ Last checked: 2026-06-07
 - [x] Detailed terrain-only renderer for map-like visual QA.
 - [x] Five-terrain preview montage.
 - [x] Submission hard-gate validator.
+- [x] Benchmark spec v0.4.
+- [x] Baseline reference submission generator.
+- [x] Leaderboard batch scoring script.
+- [x] 5 terrain x 5 objective balance-test runner.
 
 ## Current Verification
 
@@ -25,14 +29,28 @@ Last checked: 2026-06-07
 - [x] Render detailed terrain PNG.
 - [x] Render five-terrain preview PNG.
 - [x] Validate demo submission with `validate.py`.
+- [x] Generate Lake Core reference submission with `make_reference.py`.
+- [x] Generate leaderboard CSV/PNG with `leaderboard.py`.
+- [x] Run 25-combination balance test with `balance_test.py`.
+
+Latest balance sweep, seed 3:
+
+- Cases: 25
+- OK: 25
+- Failed: 0
+- Average OK score: 905.5
+- Grade spread: S 11, A 4, B 7, C 3
+- Note: baseline plans are currently strong enough that score calibration is likely too generous.
 
 ## Remaining Work
 
-- [ ] Write full benchmark spec v0.4.
+- [x] Write full benchmark spec v0.4.
 - [ ] Add participant guide for vector polygon authoring.
-- [ ] Create reference solutions for all five objectives.
-- [ ] Run 25-combination balance test: 5 terrains x 5 objectives.
-- [ ] Add leaderboard batch scoring script.
+- [x] Create baseline reference solutions for all five objectives.
+- [x] Run 25-combination balance test: 5 terrains x 5 objectives.
+- [x] Add leaderboard batch scoring script.
+- [ ] Tune baseline reference solutions into high-scoring examples.
+- [ ] Calibrate difficulty multipliers and axis normalization after the first 25-combination sweep.
 - [ ] Add event synergy rules where useful, such as mineral + freight rail + harbor.
 - [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
 - [ ] Add web submission and visualization UI.

@@ -1,0 +1,3 @@
+submission,status,score,grade,economy,transport,environment,housing,urban_form,base_1000,fit_bonus,event_score,difficulty,spent,budget,reasons
+reference_lake_core,OK,813.8,B,195.3,145.9,138.9,92.7,134.1,706.9,87.9,-19.7,1.05,2536131,5321400,
+demo_lakecore3,OK,701.3,C,183.6,117.9,118.3,80.8,82.7,583.2,89.4,-4.6,1.05,2236605,5321400,
