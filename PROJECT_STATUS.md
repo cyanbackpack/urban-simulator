@@ -33,14 +33,29 @@ Last checked: 2026-06-07
 - [x] Generate leaderboard CSV/PNG with `leaderboard.py`.
 - [x] Run 25-combination balance test with `balance_test.py`.
 
-Latest balance sweep, seed 3:
+Balance sweep before calibration, seed 3:
 
-- Cases: 25
-- OK: 25
-- Failed: 0
-- Average OK score: 905.5
-- Grade spread: S 11, A 4, B 7, C 3
-- Note: baseline plans are currently strong enough that score calibration is likely too generous.
+- Cases: 25, OK: 25, Failed: 0
+- Average OK score: 878.4
+- Grade spread: S 7, A 8, B 8, C 2
+- Note: baseline reference plans were reaching S far too often. The terrain
+  difficulty factor multiplied the whole (already-high) score, and the economy
+  axis saturated near 200 for any plan that merely met its targets.
+
+Balance sweep after calibration, seed 3:
+
+- Cases: 25, OK: 25, Failed: 0
+- Average OK score: 787.9
+- Grade spread: S 0, A 5, B 14, C 6
+- Calibration knobs in `score_v2.py`: `DIFF_GAIN` (difficulty compression),
+  `ECONOMY_STRETCH` (axis headroom), `FIT_BONUS_MAX` (fit cap), and
+  `EVENT_POS_GAIN` (opportunity damping; hazard penalties kept full).
+- Reference plans now cluster around B with A for the strongest cases. S is
+  reserved for plans that beat the baseline: the top reference (Great Delta /
+  Logistics) lands at ~943, just under the 950 S cut, so the cut is reachable
+  but not free. Per-terrain means still rise with difficulty
+  (central_plain 0.95 -> great_delta 1.30), so harder maps remain rewarded
+  without the old runaway.
 
 ## Remaining Work
 
@@ -50,7 +65,7 @@ Latest balance sweep, seed 3:
 - [x] Run 25-combination balance test: 5 terrains x 5 objectives.
 - [x] Add leaderboard batch scoring script.
 - [ ] Tune baseline reference solutions into high-scoring examples.
-- [ ] Calibrate difficulty multipliers and axis normalization after the first 25-combination sweep.
+- [x] Calibrate difficulty multipliers and axis normalization after the first 25-combination sweep.
 - [ ] Add event synergy rules where useful, such as mineral + freight rail + harbor.
 - [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
 - [ ] Add web submission and visualization UI.

@@ -69,6 +69,17 @@ WATER_BUFFER = 1         # dirty cell must keep this clear of water
 AXIS_W = {"economy": 200, "transport": 200, "environment": 200,
           "housing": 200, "urban_form": 200}
 
+# --- balance calibration (v0.4) -------------------------------------------
+# The baseline reference plans were landing in S far too often because the
+# terrain difficulty factor multiplied the whole (already-high) score and the
+# economy axis saturated at ~200 for any plan that simply met its targets.
+# These knobs rebalance so reference plans cluster around B/A and leave real
+# headroom (S) for plans that genuinely beat the baseline.
+DIFF_GAIN = 0.5          # difficulty compression: eff = 1 + (difficulty-1)*GAIN
+FIT_BONUS_MAX = 85       # objective-fit bonus ceiling (was a flat +100)
+ECONOMY_STRETCH = 1.20   # meeting targets maps below 1.0, so the axis can vary
+EVENT_POS_GAIN = 0.75    # opportunity rewards damped; hazard penalties kept full
+
 GRADES = [(950, "S"), (850, "A"), (720, "B"), (580, "C"), (0, "D")]
 
 # ===========================================================================
@@ -438,13 +449,13 @@ def clamp(v, lo=0.0, hi=1.0):
 # ===========================================================================
 def axis_economy(R, t):
     res, job = totals(R)
-    e_jobs = clamp(job / t["targets"]["jobs"])
+    e_jobs = clamp(job / (t["targets"]["jobs"] * ECONOMY_STRETCH))
     clusters = job_clusters(R)
     total_j = sum(clusters) if clusters else 0
     top_share = (clusters[0] / job) if (clusters and job) else 0
     e_aggl = clamp((top_share - 0.15) / 0.45)
     taxbase = job * 2 + res
-    e_fiscal = clamp(taxbase / (t["targets"]["jobs"] * 2 + t["targets"]["residents"]))
+    e_fiscal = clamp(taxbase / ((t["targets"]["jobs"] * 2 + t["targets"]["residents"]) * ECONOMY_STRETCH))
     sub = 0.4*e_jobs + 0.3*e_aggl + 0.3*e_fiscal
     return sub, dict(jobs=e_jobs, agglomeration=e_aggl, fiscal=e_fiscal)
 
@@ -725,6 +736,7 @@ def score_events(R, sub, t):
         elif ty == "bridge_chokepoint":
             if network_within(R, ex, ey, rad) or any((h["x"] - ex) ** 2 + (h["y"] - ey) ** 2 <= rad ** 2 for h in sub.get("hubs", [])):
                 pos = 45
+        pos *= EVENT_POS_GAIN
         net = pos - neg
         total += net
         out.append({"type": ty, "class": e.get("class"), "name": e.get("name"),
@@ -754,10 +766,11 @@ def run(t, sub):
             "housing": ho*200, "urban_form": uf*200}
     base = sum(axes.values())
     fit = objective_fit(R, sub, t, parts)
-    bonus = fit * 100
+    bonus = fit * FIT_BONUS_MAX
     ev_total, ev_detail = score_events(R, sub, t)
     diff = t.get("difficulty", 1.0)
-    final = (base + bonus + ev_total) * diff
+    eff_diff = 1 + (diff - 1) * DIFF_GAIN
+    final = (base + bonus + ev_total) * eff_diff
 
     res, job = totals(R)
     return {
@@ -771,6 +784,7 @@ def run(t, sub):
         "event_score": round(ev_total, 1),
         "events": ev_detail,
         "difficulty": diff,
+        "effective_difficulty": round(eff_diff, 3),
         "base_1000": round(base, 1),
         "detail": {"economy": ed, "transport": trd, "environment": end,
                    "housing": hod, "urban_form": ufd},

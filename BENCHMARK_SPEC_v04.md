@@ -123,10 +123,28 @@ If any gate fails, the submission receives `status: FAILED`, score 0, and a list
 ## Score Formula
 
 ```text
-final = (base_1000 + fit_bonus + event_score) * difficulty
+effective_difficulty = 1 + (difficulty - 1) * DIFF_GAIN
+final = (base_1000 + fit_bonus + event_score) * effective_difficulty
 ```
 
-`base_1000` is the sum of five 200-point axes.
+`base_1000` is the sum of five 200-point axes. The raw terrain `difficulty`
+is compressed by `DIFF_GAIN` so that hard terrains stay rewarded without the
+multiplier inflating an already-high base into an automatic S.
+
+### Calibration Knobs
+
+All live at the top of `score_v2.py` and are part of the published rulebook:
+
+- `DIFF_GAIN` (0.5): how strongly terrain difficulty scales the final score.
+- `ECONOMY_STRETCH` (1.20): meeting the resident/job targets maps below 1.0 on
+  the economy axis, so a plan that merely hits its targets does not max it out.
+- `FIT_BONUS_MAX` (85): ceiling of the objective-fit bonus.
+- `EVENT_POS_GAIN` (0.75): opportunity rewards are damped; hazard penalties are
+  applied at full strength.
+
+These were calibrated against the 25-combination baseline sweep so reference
+plans cluster around grade B (with A for the strongest), leaving S as headroom
+for submissions that genuinely beat the baseline.
 
 - Economy: jobs, agglomeration, fiscal base
 - Transport: commute, transit service, congestion, hubs
@@ -167,5 +185,7 @@ python balance_test.py balance_report.csv 3
 
 - The terrain is procedural, not real GIS data.
 - The reference generator is a baseline for testing, not a competitive solver.
-- Balance is preliminary; difficulty multipliers and event effects need more calibration.
+- Difficulty multipliers, axis normalization, and event bonuses were calibrated
+  against the 25-combination baseline sweep (reference plans now land in B/A,
+  not S). Event-effect synergies and per-objective tuning can still be refined.
 - No web submission UI exists yet.
