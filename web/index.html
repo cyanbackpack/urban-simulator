@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CityBench — 뷰어 &amp; 채점</title>
+  <link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+  <header>
+    <h1>CityBench <span class="sub">뷰어 &amp; 채점</span></h1>
+    <div class="controls">
+      <label>지형
+        <select id="terrain-select"></select>
+      </label>
+      <button id="btn-reference" title="이 지형의 기준 제출물을 불러와 채점">기준 제출물 불러오기</button>
+      <label class="file-label">제출 JSON 업로드
+        <input id="file-input" type="file" accept="application/json,.json">
+      </label>
+      <button id="btn-score" disabled>채점</button>
+      <span id="status" class="status"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="map-wrap">
+      <canvas id="map" width="900" height="675"></canvas>
+      <div id="legend" class="legend"></div>
+    </section>
+
+    <aside id="panel" class="panel">
+      <div class="placeholder">지형을 선택하고 제출물을 불러오면 점수가 여기에 표시됩니다.</div>
+    </aside>
+  </main>
+
+  <script src="/web/app.js"></script>
+</body>
+</html>

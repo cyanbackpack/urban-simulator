@@ -68,7 +68,9 @@ Balance sweep after calibration, seed 3:
 - [x] Calibrate difficulty multipliers and axis normalization after the first 25-combination sweep.
 - [ ] Add event synergy rules where useful, such as mineral + freight rail + harbor.
 - [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
-- [ ] Add web submission and visualization UI.
+- [~] Add web submission and visualization UI. Viewer + scoring done
+  (`webapp.py` + `web/`, stdlib server reusing `score_v2.run`); in-browser
+  polygon editing of submissions is the next step.
 
 ## Terrain Fidelity Note
 

@@ -15,6 +15,7 @@ CityBench / Urban Master Planner prototype.
 - PNG 마스터플랜 렌더링
 - 위성지도/지형도 스타일의 상세 지형 렌더링
 - 제출물 하드 게이트 검증기
+- 웹 뷰어 + 채점 UI (브라우저에서 지형/제출물 시각화 + 점수 확인)
 
 ## 빠른 실행
 
@@ -30,6 +31,26 @@ python preview_terrains.py terrain_preview_v04.png
 python leaderboard.py terrain_lake_core.json submissions_demo leaderboard_lakecore
 python balance_test.py balance_report.csv 3
 ```
+
+## 웹 UI (뷰어 + 채점)
+
+의존성 없이 표준 라이브러리만으로 동작하는 로컬 웹 서버입니다. 기존 채점기
+(`score_v2.py`)와 기준 제출물 생성기(`make_reference.py`)를 그대로 호출하므로
+"화면에 보이는 도시 = 채점된 도시"가 보장됩니다.
+
+```bash
+python webapp.py 8000        # 포트 생략 시 8000
+# 브라우저에서 http://localhost:8000 접속
+```
+
+- 지형 드롭다운에서 시나리오 선택 → Canvas에 지형/이벤트 렌더링
+- "기준 제출물 불러오기"로 베이스라인을 즉시 채점, 또는 제출 JSON 업로드
+- 5축 막대, 등급, 목적 적합/이벤트 점수, 예산·용량, 게이트 실패 사유 표시
+- 색상 팔레트는 `render2.py`(PNG 렌더러)와 동일
+
+엔드포인트: `GET /api/terrains`, `GET /api/terrain?file=`,
+`GET /api/reference?file=`, `POST /api/score`. 현재는 뷰어 + 채점 중심이며,
+브라우저 내 폴리곤 편집은 다음 단계입니다.
 
 `terrain_gen.py`와 `render2.py`는 SciPy/Matplotlib이 없어도 fallback으로 동작합니다. 기본적으로는 `numpy`와 `Pillow`가 필요합니다.
 
@@ -47,6 +68,8 @@ python balance_test.py balance_report.csv 3
 - `balance_test.py`: 5지형 x 5목적 기준 밸런스 테스트
 - `BENCHMARK_SPEC_v04.md`: 현재 벤치마크 스펙
 - `make_fitted.py`: Lake Core 데모 제출물 생성기
+- `webapp.py`: 웹 뷰어 + 채점 서버 (stdlib), 프론트엔드는 `web/`
+- `web/`: 웹 UI 정적 자산 (`index.html`, `app.js`, `style.css`)
 - `HANDOFF.md`: 인수인계 메모
 - `PROJECT_STATUS.md`: 진행 상태와 남은 작업 체크리스트
 
@@ -77,6 +100,6 @@ python balance_test.py balance_report.csv 3
 - 참가자용 `validate.py`
 - 참가자 가이드 문서
 - 목적별 reference solution 고도화
-- 5지형 x 5목적 밸런스 보정
-- 웹 UI 또는 비교 대시보드
+- 5지형 x 5목적 밸런스 보정 (완료)
+- 웹 UI: 브라우저 내 폴리곤 편집, 리더보드/비교 대시보드
 - 실제 GIS/OSM/DEM 데이터 파이프라인
