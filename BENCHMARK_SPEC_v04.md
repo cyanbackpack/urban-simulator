@@ -73,6 +73,8 @@ The scorer remains compatible with terrain files that omit `planning_layers`.
 - `great_delta`: river delta with floodplain, harbor, aquifer, and subsidence events.
 - `central_plain`: great plain with fertile soil, wind corridors, floodplain, and mineral events.
 
+Each generated scenario also receives one deterministic seed-selected supplemental event, such as a heritage site, natural reserve, geothermal spring, wind corridor, or extra mineral deposit depending on terrain type. This keeps event mixes varied across seeds while preserving reproducibility.
+
 ## Submission Schema
 
 ```json
@@ -162,6 +164,14 @@ final = (base_1000 + fit_bonus + event_score) * difficulty
 - Mixed: can reward preservation/mitigation or penalize careless development.
 
 Current event types include mineral deposits, deep harbor, oil field, fault line, floodplain, heritage site, natural reserve, landslide zone, typhoon corridor, wind corridor, aquifer recharge, scenic viewpoint, geothermal spring, fertile soil, and subsidence zone.
+
+### Event Synergy
+
+Events can also interact. Current explicit synergy:
+
+- `mineral_harbor_freight_synergy`: +35 event score when a terrain contains both `mineral_deposit` and `deep_harbor`, the mineral area has meaningful industrial/logistics development, a `freight_rail` line reaches the mineral area, and a `port` is placed near the deep harbor.
+
+Synergy details are reported in the scorer's `events` output alongside normal event effects.
 
 ## CLI Tools
 

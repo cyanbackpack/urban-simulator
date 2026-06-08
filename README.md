@@ -29,6 +29,8 @@ python render_terrain.py terrain_lake_core.json terrain_lake_core_detailed.png
 python preview_terrains.py terrain_preview_v04.png
 python leaderboard.py terrain_lake_core.json submissions_demo leaderboard_lakecore
 python balance_test.py balance_report.csv 3
+python multi_seed_balance.py balance_multi_seed.csv balance_multi_seed_summary.md 1 2 7 11
+python make_elite.py terrain_twin_coast.json submissions_elite/elite_twin_coast_logistics.json
 ```
 
 `terrain_gen.py`와 `render2.py`는 SciPy/Matplotlib이 없어도 fallback으로 동작합니다. 기본적으로는 `numpy`와 `Pillow`가 필요합니다.
@@ -43,10 +45,13 @@ python balance_test.py balance_report.csv 3
 - `preview_terrains.py`: 5개 지형 미리보기 몽타주 생성기
 - `validate.py`: 제출물 하드 게이트 검증기
 - `make_reference.py`: 지형별 기준 제출물 생성기
+- `make_elite.py`: 이벤트 인식형 S급 예시 제출물 생성기
 - `leaderboard.py`: 제출물 폴더 일괄 채점 및 CSV/PNG 리더보드 생성
 - `balance_test.py`: 5지형 x 5목적 기준 밸런스 테스트
+- `multi_seed_balance.py`: 여러 seed의 밸런스 안정성 리포트 생성기
 - `web/`: 폴리곤 편집기와 리더보드 비교 대시보드
 - `BENCHMARK_SPEC_v04.md`: 현재 벤치마크 스펙
+- `PARTICIPANT_GUIDE.md`: 직접 작성 및 Codex/Claude Code vibe-coding 참가자 가이드
 - `make_fitted.py`: Lake Core 데모 제출물 생성기
 - `HANDOFF.md`: 인수인계 메모
 - `PROJECT_STATUS.md`: 진행 상태와 남은 작업 체크리스트
@@ -93,6 +98,19 @@ Terrain JSON files now include optional `planning_layers` data for map-like urba
 - `corridors`: low-impact road and rail/freight candidate axes.
 
 These layers are visual/planning aids. The deterministic scorer still uses the compact `rows`, vector submission geometry, terrain events, and terrain metadata.
+
+## 5-minute AI-assisted loop
+
+CityBench is designed so a participant can draw manually, but the main workflow should also work inside Codex, Claude Code, or another coding-agent environment:
+
+1. Ask the agent to read a terrain JSON and draft a submission JSON.
+2. Run `python validate.py terrain.json submission.json`.
+3. Fix hard gates: non-buildable cells, budget, network reachability, minimum residents/jobs.
+4. Run `python score_v2.py terrain.json submission.json`.
+5. Improve the weakest axis and event interactions.
+6. Render with `python render2.py terrain.json submission.json plan.png`.
+
+See `PARTICIPANT_GUIDE.md` for prompt examples and event strategy.
 
 ## Web UI
 

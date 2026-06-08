@@ -19,6 +19,11 @@ Last checked: 2026-06-08
 - [x] Baseline reference submission generator.
 - [x] Leaderboard batch scoring script.
 - [x] 5 terrain x 5 objective balance-test runner.
+- [x] Multi-seed calibration runner and report.
+- [x] Event synergy scoring rule for mineral + freight rail + harbor chains.
+- [x] Deterministic seed-selected supplemental events for event mix diversity.
+- [x] Event-aware elite submission generator with S-grade proof case.
+- [x] Participant guide for manual and Codex/Claude Code vibe-coding workflows.
 - [x] Browser-based polygon editor prototype.
 - [x] Browser-based leaderboard comparison dashboard.
 - [x] Local web scorer/validator API.
@@ -37,6 +42,8 @@ Last checked: 2026-06-08
 - [x] Generate Lake Core reference submission with `make_reference.py`.
 - [x] Generate leaderboard CSV/PNG with `leaderboard.py`.
 - [x] Run 25-combination balance test with `balance_test.py`.
+- [x] Run 100-combination multi-seed calibration sweep with `multi_seed_balance.py`.
+- [x] Generate S-grade elite example with `make_elite.py`.
 - [x] Verify local API payload scoring and validation helpers.
 
 Latest balance sweep, seed 3:
@@ -44,24 +51,40 @@ Latest balance sweep, seed 3:
 - Cases: 25
 - OK: 25
 - Failed: 0
-- Average OK score: 905.5
-- Grade spread: S 11, A 4, B 7, C 3
+- Average OK score: 910.1
+- Grade spread: S 11, A 4, B 8, C 2
 - Note: baseline plans are currently strong enough that score calibration is likely too generous.
+
+Latest multi-seed sweep, seeds 1, 2, 7, 11:
+
+- Cases: 100
+- OK: 100
+- Failed: 0
+- Average OK score: 877.5
+- Score range: 681.7 - 1100.4
+- Grade spread: S 31, A 28, B 32, C 9
+
+S-grade proof case:
+
+- `terrain_twin_coast.json` + `submissions_elite/elite_twin_coast_logistics.json`
+- Score: 1036.2, grade S
 
 ## Remaining Work
 
 - [x] Write full benchmark spec v0.4.
-- [ ] Add participant guide for vector polygon authoring.
+- [x] Add participant guide for vector polygon authoring and AI-assisted submission authoring.
 - [x] Create baseline reference solutions for all five objectives.
 - [x] Run 25-combination balance test: 5 terrains x 5 objectives.
 - [x] Add leaderboard batch scoring script.
 - [ ] Tune baseline reference solutions into high-scoring examples.
 - [ ] Calibrate difficulty multipliers and axis normalization after the first 25-combination sweep.
-- [ ] Add event synergy rules where useful, such as mineral + freight rail + harbor.
+- [x] Add event synergy rules where useful, such as mineral + freight rail + harbor.
 - [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
 - [x] Add web submission and visualization UI.
 - [x] Connect the web editor directly to local scorer/validator through a backend service.
 - [x] Upgrade terrain detail toward urban-planning map fidelity with planning overlays.
+- [ ] Add multi-terrain web leaderboard page beyond the current single-terrain folder leaderboard.
+- [ ] Add richer dashboard chart types such as stacked bars and per-axis deltas.
 
 ## Terrain Fidelity Note
 

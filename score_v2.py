@@ -649,6 +649,59 @@ def facility_within(sub, ex, ey, radius, ftype):
     return False
 
 
+def _point_segment_distance(px, py, ax, ay, bx, by):
+    dx, dy = bx - ax, by - ay
+    denom = dx * dx + dy * dy
+    if denom == 0:
+        return math.hypot(px - ax, py - ay)
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / denom))
+    return math.hypot(px - (ax + dx * t), py - (ay + dy * t))
+
+
+def transit_within(sub, ex, ey, radius, ttype):
+    for line in sub.get("transit", []):
+        if line.get("type") != ttype:
+            continue
+        path = line.get("path", [])
+        for a, b in zip(path, path[1:]):
+            if _point_segment_distance(ex, ey, a[0], a[1], b[0], b[1]) <= radius:
+                return True
+    return False
+
+
+def event_by_type(t, etype):
+    for event in t.get("events", []):
+        if event.get("type") == etype:
+            return event
+    return None
+
+
+def score_event_synergies(R, sub, t):
+    out = []
+    total = 0.0
+    mineral = event_by_type(t, "mineral_deposit")
+    harbor = event_by_type(t, "deep_harbor")
+    if mineral and harbor:
+        mx, my, mr = mineral["x"], mineral["y"], mineral["radius"]
+        hx, hy, hr = harbor["x"], harbor["y"], harbor["radius"]
+        mineral_industry = disc_coverage(R, mx, my, mr, lambda z: z in IND) >= 0.12
+        freight_access = transit_within(sub, mx, my, mr * 1.35, "freight_rail")
+        port_access = facility_within(sub, hx, hy, hr * 1.2, "port")
+        if mineral_industry and freight_access and port_access:
+            gain = 35.0
+            total += gain
+            out.append({
+                "type": "mineral_harbor_freight_synergy",
+                "class": "opportunity",
+                "name": "Mineral export chain",
+                "resource": mineral.get("resource"),
+                "gain": gain,
+                "loss": 0.0,
+                "net": gain,
+            })
+    return total, out
+
+
 def score_events(R, sub, t):
     out = []
     total = 0.0
@@ -730,6 +783,9 @@ def score_events(R, sub, t):
         out.append({"type": ty, "class": e.get("class"), "name": e.get("name"),
                     "resource": e.get("resource"),
                     "gain": round(pos, 1), "loss": round(neg, 1), "net": round(net, 1)})
+    synergy_total, synergy_detail = score_event_synergies(R, sub, t)
+    total += synergy_total
+    out.extend(synergy_detail)
     total = max(-EVENT_CLAMP, min(EVENT_CLAMP, total))
     return total, out
 

@@ -169,9 +169,9 @@ def build_transit(t, anchor, objective):
 
     # Dense arterial mesh keeps the hard connectivity gate boring on purpose.
     for x in range(6, w, 8):
-        transit.append({"type": "arterial", "path": [[x * cell, 2 * cell], [x * cell, (h - 2) * cell]]})
+        transit.append({"type": "arterial", "path": [[x * cell, 0], [x * cell, (h - 1) * cell]]})
     for y in range(6, h, 8):
-        transit.append({"type": "arterial", "path": [[2 * cell, y * cell], [(w - 2) * cell, y * cell]]})
+        transit.append({"type": "arterial", "path": [[0, y * cell], [(w - 1) * cell, y * cell]]})
 
     transit.append({"type": "highway", "path": [[2 * cell, ay * cell], [(w - 2) * cell, ay * cell]]})
     transit.append({"type": "subway", "path": [[(ax - 34) * cell, ay * cell], [ax * cell, ay * cell], [(ax + 34) * cell, (ay - 6) * cell]]})

@@ -312,6 +312,7 @@ def place_events(ttype, layers, rng):
     forest = layers["forest"]
     farmland = layers["farmland"]
     water_influence = layers["water_influence"]
+    moisture = layers["moisture"]
     land = (g != "~") & (g != "^")
     events = []
 
@@ -386,6 +387,39 @@ def place_events(ttype, layers, rng):
         add("wind_corridor", choose(open_plain, 1 - slope), 6)
         add("floodplain", choose(low_wet, water_influence), 6)
         add("mineral_deposit", choose(high_ground | open_plain, elev), 4, resource="iron")
+
+    supplemental = {
+        "lake_core": [
+            ("heritage_site", choose(open_plain, 1 - slope), 4, {}),
+            ("natural_reserve", choose(forest | low_wet, moisture + water_influence), 6, {}),
+            ("geothermal_spring", choose(land & (water_influence > 0.08), water_influence + elev * 0.2), 4, {}),
+        ],
+        "twin_coast": [
+            ("mineral_deposit", choose(high_ground | open_plain, elev + slope), 4, {"resource": "rare_earth"}),
+            ("heritage_site", choose(open_plain, 1 - slope), 4, {}),
+            ("natural_reserve", choose(forest | low_wet, moisture + water_influence), 6, {}),
+        ],
+        "mountain_gate": [
+            ("wind_corridor", choose(high_ground | open_plain, elev + (1 - slope) * 0.2), 5, {}),
+            ("heritage_site", choose(open_plain, 1 - slope), 4, {}),
+            ("natural_reserve", choose(forest | low_wet, moisture + water_influence), 6, {}),
+        ],
+        "great_delta": [
+            ("mineral_deposit", choose(high_ground | open_plain, elev + slope), 4, {"resource": "bauxite"}),
+            ("heritage_site", choose(open_plain, 1 - slope), 4, {}),
+            ("natural_reserve", choose(forest | low_wet, moisture + water_influence), 6, {}),
+        ],
+        "central_plain": [
+            ("geothermal_spring", choose(land & (water_influence > 0.04), water_influence + elev * 0.15), 4, {}),
+            ("heritage_site", choose(open_plain, 1 - slope), 4, {}),
+            ("natural_reserve", choose(forest | low_wet, moisture + water_influence), 6, {}),
+        ],
+    }[ttype]
+    seen_types = {event["type"] for event in events}
+    candidates = [item for item in supplemental if item[0] not in seen_types and item[1]]
+    if candidates:
+        etype, cell, radius, extra = candidates[int(rng.integers(0, len(candidates)))]
+        add(etype, cell, radius, **extra)
 
     return events
 
