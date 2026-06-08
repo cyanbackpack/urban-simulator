@@ -7,6 +7,7 @@ Then open http://127.0.0.1:8765/web/
 """
 
 import json
+import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import score_v2
@@ -42,6 +43,9 @@ def validate_payload(payload):
 
 class CityBenchHandler(SimpleHTTPRequestHandler):
     server_version = "CityBenchWorkbench/0.1"
+
+    def log_message(self, format, *args):
+        return
 
     def do_POST(self):
         routes = {
@@ -88,7 +92,8 @@ class CityBenchHandler(SimpleHTTPRequestHandler):
 
 def main():
     server = ThreadingHTTPServer((HOST, PORT), CityBenchHandler)
-    print(f"CityBench web server: http://{HOST}:{PORT}/web/")
+    if getattr(sys, "stdout", None):
+        print(f"CityBench web server: http://{HOST}:{PORT}/web/")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
