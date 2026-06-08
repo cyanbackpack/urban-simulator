@@ -14,8 +14,27 @@ CityBench / Urban Master Planner prototype.
 - 목적 적합 보너스, 이벤트 점수, 난이도 계수
 - PNG 마스터플랜 렌더링
 - 위성지도/지형도 스타일의 상세 지형 렌더링
-- 제출물 하드 게이트 검증기
-- 웹 뷰어 + 채점 UI (브라우저에서 지형/제출물 시각화 + 점수 확인)
+- 제출물 하드 게이트 검증기 + 구조 스키마 검증기 (`schema.py`)
+- 25개 모범답안(elite) 세트 + 베이스라인(reference) 세트
+- 웹 뷰어 + 채점 UI + 지형×목적 비교 대시보드
+- 회귀 테스트 + GitHub Actions CI
+
+## 채점 풀 구조 (모범답안 vs 베이스라인)
+
+두 가지 결정론적 제출물 풀로 채점 분포를 고정합니다.
+
+- **베이스라인** (`make_reference.py`): 벤치마크의 바닥. 멀티시드에서 S가
+  나오지 않고 B 중심으로 모입니다. 목표 분포는 `balance_multiseed.py --check`로
+  강제합니다 (실패 0, S 0%, A ≤ 30%, 지형 간 평균 격차 ≤ 110점).
+- **엘리트(모범답안)** (`make_elite.py`): 공개 모범답안. 모든 케이스가 **최소 A**,
+  일부는 **S 도달을 증명**합니다. 25개 세트는 `make_elite_set.py`로 생성되어
+  `submissions_elite/`에 저장됩니다.
+
+```bash
+python balance_multiseed.py --check       # 베이스라인 분포가 목표 안에 있는지
+python make_elite_set.py --check          # 25개 모범답안 A-바닥/S-증명 + 파일 생성
+python run_tests.py                        # 전체 회귀 테스트 (stdlib unittest)
+```
 
 ## 빠른 실행
 
@@ -23,13 +42,15 @@ CityBench / Urban Master Planner prototype.
 python terrain_gen.py lake_core "Financial Capital" 3 terrain_lake_core.json
 python make_fitted.py
 python make_reference.py terrain_lake_core.json submission_reference_lake_core.json
+python make_elite.py terrain_lake_core.json submission_elite_lake_core.json
 python validate.py terrain_lake_core.json submission_lakecore3.json
+python schema.py submission_lakecore3.json
 python score_v2.py terrain_lake_core.json submission_lakecore3.json
 python render2.py terrain_lake_core.json submission_lakecore3.json plan_v04.png
 python render_terrain.py terrain_lake_core.json terrain_lake_core_detailed.png
 python preview_terrains.py terrain_preview_v04.png
 python leaderboard.py terrain_lake_core.json submissions_demo leaderboard_lakecore
-python balance_test.py balance_report.csv 3
+python balance_multiseed.py
 ```
 
 ## 웹 UI (뷰어 + 채점)
@@ -73,10 +94,18 @@ python webapp.py 8000        # 포트 생략 시 8000
 제출물이 채점되어 있으면 같은 표에 "현재 작업" 행으로 끼워 넣어 내 순위를
 확인할 수 있습니다. 각 행의 "불러오기"로 해당 제출물을 편집기에 띄울 수 있습니다.
 
+### 비교 대시보드 (지형 × 목적 매트릭스)
+
+헤더의 "대시보드" 버튼은 `GET /api/dashboard`로 **모범답안(elite)과 베이스라인
+(reference) 세트를 전 지형 × 전 목적 매트릭스로 즉시 채점**합니다. 각 세트를
+등급 히트맵(행=난이도순 지형, 열=목적, 셀=등급+점수, 우측=지형별 평균)으로
+보여주고, 하단에 등급 분포 요약을 출력해 엘리트(A 이상, S 다수)와 베이스라인
+(B 중심, S 없음)의 분리를 한눈에 확인할 수 있습니다.
+
 엔드포인트: `GET /api/terrains`, `GET /api/terrain?file=`,
 `GET /api/reference?file=`, `GET /api/submissions?dir=`,
 `GET /api/submission?dir=&file=`, `GET /api/leaderboard?file=&dir=`,
-`POST /api/score`(`{terrain_file, submission, events?}`).
+`GET /api/dashboard?dir=`, `POST /api/score`(`{terrain_file, submission, events?}`).
 
 `terrain_gen.py`와 `render2.py`는 SciPy/Matplotlib이 없어도 fallback으로 동작합니다. 기본적으로는 `numpy`와 `Pillow`가 필요합니다.
 
@@ -89,9 +118,17 @@ python webapp.py 8000        # 포트 생략 시 8000
 - `render_terrain.py`: 상세 지형 전용 렌더러
 - `preview_terrains.py`: 5개 지형 미리보기 몽타주 생성기
 - `validate.py`: 제출물 하드 게이트 검증기
-- `make_reference.py`: 지형별 기준 제출물 생성기
+- `make_reference.py`: 베이스라인(기준) 제출물 생성기
+- `make_elite.py`: 모범답안(elite) 제출물 생성기 (목표치 기반 면적, hazard 회피
+  컴팩트 앵커, 다핵 일자리, 6개 허브, 이벤트 정렬 시설)
+- `make_elite_set.py`: 5지형 x 5목적 = 25개 모범답안 + 베이스라인 세트 생성·채점
 - `leaderboard.py`: 제출물 폴더 일괄 채점 및 CSV/PNG 리더보드 생성
-- `balance_test.py`: 5지형 x 5목적 기준 밸런스 테스트
+- `balance_test.py`: 5지형 x 5목적 단일 시드 밸런스 테스트
+- `balance_multiseed.py`: 멀티시드 베이스라인 스윕 + 목표 분포 검사(`--check`)
+- `schema.py`: 제출물 구조 스키마 검증기 (의존성 없음)
+- `run_tests.py` / `tests/`: 회귀 테스트 (golden 점수, 밸런스 envelope,
+  엘리트 A-바닥/S-증명, 스키마)
+- `.github/workflows/ci.yml`: 푸시/PR마다 컴파일 + 테스트 + 밸런스/엘리트 검사
 - `BENCHMARK_SPEC_v04.md`: 현재 벤치마크 스펙
 - `make_fitted.py`: Lake Core 데모 제출물 생성기
 - `webapp.py`: 웹 뷰어 + 채점 서버 (stdlib), 프론트엔드는 `web/`

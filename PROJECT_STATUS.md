@@ -42,20 +42,37 @@ Balance sweep before calibration, seed 3:
   difficulty factor multiplied the whole (already-high) score, and the economy
   axis saturated near 200 for any plan that merely met its targets.
 
-Balance sweep after calibration, seed 3:
+## Calibration target distribution (decided)
 
-- Cases: 25, OK: 25, Failed: 0
-- Average OK score: 787.9
-- Grade spread: S 0, A 5, B 14, C 6
+The benchmark is tuned around two named pools:
+
+- **Baseline pool** (`make_reference.py`): the floor -- competent but
+  unoptimised plans. Target envelope (enforced by `balance_multiseed.py
+  --check` and `tests/test_balance.py`): no hard-gate failures, **no S**,
+  A <= 30%, C <= 30%, per-terrain mean spread <= 110 pts.
+- **Elite pool** (`make_elite.py`): public model answers. Every case must
+  reach **at least A**, and **S must be provably achievable** (the headroom
+  above the baseline is real, not free).
+
+Multi-seed baseline sweep (`balance_multiseed.py`, seeds 1,2,3,7,11):
+
+- 125 cases, 125 OK, 0 failed (the reference arterial mesh now hugs the far
+  edges, fixing the great_delta seed-7 connectivity failures).
+- Grade spread: S 0 / A 15 / B 94 / C 16; average ~782.
+- `DIFF_GAIN` 0.5 -> 0.4 compresses the per-terrain spread from ~115 to ~96
+  while keeping harder maps rewarded (central_plain ~717 -> twin_coast ~813).
 - Calibration knobs in `score_v2.py`: `DIFF_GAIN` (difficulty compression),
   `ECONOMY_STRETCH` (axis headroom), `FIT_BONUS_MAX` (fit cap), and
   `EVENT_POS_GAIN` (opportunity damping; hazard penalties kept full).
-- Reference plans now cluster around B with A for the strongest cases. S is
-  reserved for plans that beat the baseline: the top reference (Great Delta /
-  Logistics) lands at ~943, just under the 950 S cut, so the cut is reachable
-  but not free. Per-terrain means still rise with difficulty
-  (central_plain 0.95 -> great_delta 1.30), so harder maps remain rewarded
-  without the old runaway.
+
+Elite model-answer set (`make_elite_set.py`, committed terrains, seed 3):
+
+- 25 cases (5 terrains x 5 objectives), all A or better: **A 14 / S 11**.
+- S proven on great_delta and mountain_gate across all objectives, plus
+  several lake_core/twin_coast cases; baselines on the same matrix stay
+  A 4 / B 18 / C 3 and never reach S -- clean separation.
+- Saved as JSON pairs in `submissions_elite/` and `submissions_reference/`
+  (+ `elite_set_report.csv`).
 
 ## Remaining Work
 
@@ -64,10 +81,17 @@ Balance sweep after calibration, seed 3:
 - [x] Create baseline reference solutions for all five objectives.
 - [x] Run 25-combination balance test: 5 terrains x 5 objectives.
 - [x] Add leaderboard batch scoring script.
-- [ ] Tune baseline reference solutions into high-scoring examples.
-- [x] Calibrate difficulty multipliers and axis normalization after the first 25-combination sweep.
+- [x] Tune reference solutions into high-scoring examples -- delivered as a
+  separate elite model-answer set (`make_elite.py` / `make_elite_set.py`)
+  so the baseline stays a genuine floor.
+- [x] Calibrate difficulty multipliers and axis normalization, with a
+  decided target distribution and multi-seed verification.
+- [x] Regression tests + CI: golden scores, baseline envelope, elite
+  A-floor/S-proof, schema validation (`tests/`, `run_tests.py`,
+  `.github/workflows/ci.yml`); structural validator in `schema.py`.
 - [ ] Add event synergy rules where useful, such as mineral + freight rail + harbor.
-- [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
+- [ ] Add participant package (prompt templates, good/bad examples) -- deferred.
+- [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity -- deferred to v1.5+.
 - [x] Add web submission and visualization UI. `webapp.py` + `web/` (stdlib
   server reusing `score_v2.run`) now includes an in-browser editor: draw/drag
   zones, transit, facilities; undo/redo; live area/coordinate readout; overlap
@@ -76,8 +100,11 @@ Balance sweep after calibration, seed 3:
   Stations and hubs are editable in-canvas too (place/drag/delete; hub count
   feeds the transport axis). Snap-to-grid with a visible grid, plus a web
   leaderboard/comparison modal (batch-scores a submissions folder against the
-  current terrain and ranks it alongside the working plan) are also in.
-  Remaining polish: multi-terrain leaderboard pages and richer charts.
+  current terrain and ranks it alongside the working plan) are also in. A
+  multi-terrain comparison dashboard (`GET /api/dashboard`, "대시보드" button)
+  scores the elite and baseline sets across the whole terrain x objective
+  matrix and renders them as grade heatmaps with a distribution summary.
+  Remaining polish: richer charts and an in-browser submission gallery.
 
 ## Terrain Fidelity Note
 

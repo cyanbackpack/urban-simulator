@@ -135,16 +135,27 @@ multiplier inflating an already-high base into an automatic S.
 
 All live at the top of `score_v2.py` and are part of the published rulebook:
 
-- `DIFF_GAIN` (0.5): how strongly terrain difficulty scales the final score.
+- `DIFF_GAIN` (0.4): how strongly terrain difficulty scales the final score.
+  Lowered from 0.5 to compress the per-terrain spread (~115 -> ~96 pts) while
+  still rewarding harder maps.
 - `ECONOMY_STRETCH` (1.20): meeting the resident/job targets maps below 1.0 on
   the economy axis, so a plan that merely hits its targets does not max it out.
 - `FIT_BONUS_MAX` (85): ceiling of the objective-fit bonus.
 - `EVENT_POS_GAIN` (0.75): opportunity rewards are damped; hazard penalties are
   applied at full strength.
 
-These were calibrated against the 25-combination baseline sweep so reference
-plans cluster around grade B (with A for the strongest), leaving S as headroom
-for submissions that genuinely beat the baseline.
+### Target Distribution (two pools)
+
+The calibration is anchored by two deterministic submission pools:
+
+- **Baseline** (`make_reference.py`): the floor. Verified by
+  `balance_multiseed.py --check` over seeds 1,2,3,7,11: 125/125 OK, no S,
+  A <= 30%, per-terrain mean spread <= 110 pts (grade spread S0/A15/B94/C16).
+- **Elite** (`make_elite.py` / `make_elite_set.py`): public model answers.
+  Every one of the 25 terrain x objective cases reaches at least A, and S is
+  provably achievable (A14/S11 on the committed terrains). The same baselines
+  on that matrix stay A4/B18/C3 -- the S headroom above the baseline is real,
+  not free.
 
 - Economy: jobs, agglomeration, fiscal base
 - Transport: commute, transit service, congestion, hubs
@@ -177,15 +188,20 @@ python validate.py terrain_lake_core.json submission_reference.json
 python score_v2.py terrain_lake_core.json submission_reference.json
 python render2.py terrain_lake_core.json submission_reference.json plan.png
 python render_terrain.py terrain_lake_core.json terrain_detail.png
+python make_elite.py terrain_lake_core.json submission_elite.json
+python make_elite_set.py --check
+python schema.py submission_reference.json
 python leaderboard.py terrain_lake_core.json submissions leaderboard
-python balance_test.py balance_report.csv 3
+python balance_multiseed.py
+python run_tests.py
 ```
 
 ## Current Limitations
 
 - The terrain is procedural, not real GIS data.
-- The reference generator is a baseline for testing, not a competitive solver.
-- Difficulty multipliers, axis normalization, and event bonuses were calibrated
-  against the 25-combination baseline sweep (reference plans now land in B/A,
-  not S). Event-effect synergies and per-objective tuning can still be refined.
-- No web submission UI exists yet.
+- The reference generator is a deliberate baseline (the floor); the elite
+  generator (`make_elite.py`) provides the competitive model answers.
+- Difficulty multipliers, axis normalization, and event bonuses are calibrated
+  to a decided two-pool target distribution and verified across seeds by the
+  regression suite. Event-effect synergies can still be refined.
+- GIS/OSM/DEM real-map fidelity is deferred to a later version.
