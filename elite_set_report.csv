@@ -1,0 +1,26 @@
+terrain,objective,elite_score,elite_grade,elite_status,ref_score,ref_grade,ref_status
+lake_core,Financial Capital,907.6,A,OK,770.8,B,OK
+lake_core,Logistics Hub,949.7,A,OK,762.4,B,OK
+lake_core,Innovation City,940.6,A,OK,783.1,B,OK
+lake_core,Tourism Capital,906.0,A,OK,745.2,B,OK
+lake_core,Eco Metropolis,946.2,A,OK,808.0,B,OK
+twin_coast,Financial Capital,898.3,A,OK,770.3,B,OK
+twin_coast,Logistics Hub,951.3,S,OK,871.5,A,OK
+twin_coast,Innovation City,905.2,A,OK,794.5,B,OK
+twin_coast,Tourism Capital,924.7,A,OK,809.1,B,OK
+twin_coast,Eco Metropolis,900.7,A,OK,813.2,B,OK
+mountain_gate,Financial Capital,1006.9,S,OK,806.4,B,OK
+mountain_gate,Logistics Hub,1054.7,S,OK,848.9,B,OK
+mountain_gate,Innovation City,1015.3,S,OK,844.0,B,OK
+mountain_gate,Tourism Capital,1005.5,S,OK,824.5,B,OK
+mountain_gate,Eco Metropolis,1019.9,S,OK,846.0,B,OK
+great_delta,Financial Capital,958.1,S,OK,816.3,B,OK
+great_delta,Logistics Hub,1014.4,S,OK,903.8,A,OK
+great_delta,Innovation City,995.1,S,OK,873.4,A,OK
+great_delta,Tourism Capital,972.9,S,OK,844.5,B,OK
+great_delta,Eco Metropolis,991.5,S,OK,898.2,A,OK
+central_plain,Financial Capital,856.5,A,OK,697.6,C,OK
+central_plain,Logistics Hub,897.0,A,OK,748.1,B,OK
+central_plain,Innovation City,861.7,A,OK,710.2,C,OK
+central_plain,Tourism Capital,855.2,A,OK,698.6,C,OK
+central_plain,Eco Metropolis,896.1,A,OK,765.4,B,OK

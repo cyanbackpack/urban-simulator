@@ -75,7 +75,7 @@ AXIS_W = {"economy": 200, "transport": 200, "environment": 200,
 # economy axis saturated at ~200 for any plan that simply met its targets.
 # These knobs rebalance so reference plans cluster around B/A and leave real
 # headroom (S) for plans that genuinely beat the baseline.
-DIFF_GAIN = 0.5          # difficulty compression: eff = 1 + (difficulty-1)*GAIN
+DIFF_GAIN = 0.4          # difficulty compression: eff = 1 + (difficulty-1)*GAIN
 FIT_BONUS_MAX = 85       # objective-fit bonus ceiling (was a flat +100)
 ECONOMY_STRETCH = 1.20   # meeting targets maps below 1.0, so the axis can vary
 EVENT_POS_GAIN = 0.75    # opportunity rewards damped; hazard penalties kept full
