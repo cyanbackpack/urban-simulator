@@ -256,6 +256,10 @@ select {
   color: var(--ink);
 }
 
+.check-row.muted-layer {
+  color: #8a8f95;
+}
+
 .check-row input {
   width: 16px;
   height: 16px;

@@ -99,6 +99,7 @@ function setup() {
     state.draft.pop();
     drawMap();
   });
+  $("deleteVertex").addEventListener("click", deleteSelectedVertex);
   $("deleteSelected").addEventListener("click", deleteSelected);
   $("downloadSubmission").addEventListener("click", downloadSubmission);
   ["layerTerrain", "layerZones", "layerTransit", "layerEvents", "layerGrid"].forEach((id) => {
@@ -282,16 +283,16 @@ function drawGrid(ctx) {
   const cell = t.cell_size_m;
   const worldW = t.width * cell;
   const worldH = t.height * cell;
-  ctx.strokeStyle = "rgba(80, 85, 90, 0.18)";
+  ctx.strokeStyle = "rgba(32, 36, 42, 0.055)";
   ctx.lineWidth = 1;
-  for (let x = 0; x <= t.width; x += 5) {
+  for (let x = 0; x <= t.width; x += 10) {
     const sx = state.offsetX + x * cell * state.scale;
     ctx.beginPath();
     ctx.moveTo(sx, state.offsetY);
     ctx.lineTo(sx, state.offsetY + worldH * state.scale);
     ctx.stroke();
   }
-  for (let y = 0; y <= t.height; y += 5) {
+  for (let y = 0; y <= t.height; y += 10) {
     const sy = state.offsetY + y * cell * state.scale;
     ctx.beginPath();
     ctx.moveTo(state.offsetX, sy);
@@ -323,13 +324,32 @@ function drawPolygon(ctx, polygon, color, selected) {
   ctx.fill();
   ctx.stroke();
   if (selected) {
-    polygon.forEach((pt) => {
+    polygon.forEach((pt, i) => {
       const [x, y] = toScreen(pt);
       ctx.fillStyle = "#ffffff";
       ctx.strokeStyle = "#10151b";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      if (state.selected?.kind === "zones" && state.selected.vertex === i) {
+        ctx.strokeStyle = "#d48736";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, 9, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    });
+    polygon.forEach((pt, i) => {
+      const next = polygon[(i + 1) % polygon.length];
+      const mid = [(pt[0] + next[0]) / 2, (pt[1] + next[1]) / 2];
+      const [x, y] = toScreen(mid);
+      ctx.fillStyle = "#fff4df";
+      ctx.strokeStyle = "#d48736";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.rect(x - 4, y - 4, 8, 8);
       ctx.fill();
       ctx.stroke();
     });
@@ -360,6 +380,18 @@ function drawPath(ctx, path, color, width, selected) {
     else ctx.lineTo(x, y);
   });
   ctx.stroke();
+  if (selected) {
+    path.forEach((pt, i) => {
+      const [x, y] = toScreen(pt);
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = state.selected?.vertex === i ? "#d48736" : "#10151b";
+      ctx.lineWidth = state.selected?.vertex === i ? 3 : 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+  }
 }
 
 function drawPoint(ctx, pt, label, fill, stroke, selected) {
@@ -481,13 +513,14 @@ function canvasUp() {
 function selectAt(pt) {
   state.selected = null;
   state.drag = null;
-  const threshold = 1200 / Math.max(0.1, state.scale);
+  const threshold = 12 / Math.max(0.0001, state.scale);
+  const edgeThreshold = 8 / Math.max(0.0001, state.scale);
 
   for (let i = 0; i < state.submission.zones.length; i++) {
     const zone = state.submission.zones[i];
     const vertex = nearestVertex(zone.polygon || [], pt, threshold);
     if (vertex >= 0) {
-      state.selected = { kind: "zones", index: i };
+      state.selected = { kind: "zones", index: i, vertex };
       state.drag = { kind: "zones", index: i, vertex };
       drawMap();
       return;
@@ -497,7 +530,7 @@ function selectAt(pt) {
     const line = state.submission.transit[i];
     const vertex = nearestVertex(line.path || [], pt, threshold);
     if (vertex >= 0) {
-      state.selected = { kind: "transit", index: i };
+      state.selected = { kind: "transit", index: i, vertex };
       state.drag = { kind: "transit", index: i, vertex };
       drawMap();
       return;
@@ -513,6 +546,30 @@ function selectAt(pt) {
         drawMap();
         return;
       }
+    }
+  }
+  for (let i = 0; i < state.submission.zones.length; i++) {
+    const zone = state.submission.zones[i];
+    const edge = nearestEdge(zone.polygon || [], pt, edgeThreshold, true);
+    if (edge) {
+      zone.polygon.splice(edge.insertAt, 0, edge.point);
+      state.selected = { kind: "zones", index: i, vertex: edge.insertAt };
+      state.drag = { kind: "zones", index: i, vertex: edge.insertAt };
+      updateJson(false);
+      drawMap();
+      return;
+    }
+  }
+  for (let i = 0; i < state.submission.transit.length; i++) {
+    const line = state.submission.transit[i];
+    const edge = nearestEdge(line.path || [], pt, edgeThreshold, false);
+    if (edge) {
+      line.path.splice(edge.insertAt, 0, edge.point);
+      state.selected = { kind: "transit", index: i, vertex: edge.insertAt };
+      state.drag = { kind: "transit", index: i, vertex: edge.insertAt };
+      updateJson(false);
+      drawMap();
+      return;
     }
   }
   for (let i = 0; i < state.submission.zones.length; i++) {
@@ -536,6 +593,31 @@ function nearestVertex(points, pt, threshold) {
     }
   });
   return best;
+}
+
+function nearestEdge(points, pt, threshold, closed) {
+  if (!points || points.length < 2) return null;
+  const count = closed ? points.length : points.length - 1;
+  let best = null;
+  for (let i = 0; i < count; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const projected = projectPointToSegment(pt, a, b);
+    const d = distance(pt, projected.point);
+    if (d <= threshold && (!best || d < best.distance)) {
+      best = { distance: d, insertAt: i + 1, point: projected.point };
+    }
+  }
+  return best;
+}
+
+function projectPointToSegment(pt, a, b) {
+  const vx = b[0] - a[0];
+  const vy = b[1] - a[1];
+  const len2 = vx * vx + vy * vy;
+  if (!len2) return { point: a.slice(), t: 0 };
+  const t = Math.max(0, Math.min(1, ((pt[0] - a[0]) * vx + (pt[1] - a[1]) * vy) / len2));
+  return { point: [a[0] + vx * t, a[1] + vy * t], t };
 }
 
 function distance(a, b) {
@@ -576,6 +658,18 @@ function deleteSelected() {
   drawMap();
 }
 
+function deleteSelectedVertex() {
+  if (!state.selected || state.selected.vertex === undefined) return;
+  const item = state.submission[state.selected.kind]?.[state.selected.index];
+  if (!item) return;
+  const points = state.selected.kind === "zones" ? item.polygon : item.path;
+  const minPoints = state.selected.kind === "zones" ? 3 : 2;
+  if (!points || points.length <= minPoints) return;
+  points.splice(state.selected.vertex, 1);
+  state.selected.vertex = Math.min(state.selected.vertex, points.length - 1);
+  updateJson();
+}
+
 function updateStats() {
   $("editorStats").innerHTML = `
     <div><span>Zones</span><strong>${state.submission.zones.length}</strong></div>
@@ -592,7 +686,8 @@ function updateSelectionDetails() {
     return;
   }
   const item = state.submission[state.selected.kind][state.selected.index];
-  el.innerHTML = `<strong>${state.selected.kind} #${state.selected.index + 1}</strong><br>${escapeHtml(JSON.stringify(item, null, 2))}`;
+  const vertex = state.selected.vertex === undefined ? "" : `<br><strong>point</strong> ${state.selected.vertex + 1}`;
+  el.innerHTML = `<strong>${state.selected.kind} #${state.selected.index + 1}</strong>${vertex}<br>${escapeHtml(JSON.stringify(item, null, 2))}`;
 }
 
 function updateJson(redraw = true) {
