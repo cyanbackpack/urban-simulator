@@ -68,9 +68,13 @@ Balance sweep after calibration, seed 3:
 - [x] Calibrate difficulty multipliers and axis normalization after the first 25-combination sweep.
 - [ ] Add event synergy rules where useful, such as mineral + freight rail + harbor.
 - [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
-- [~] Add web submission and visualization UI. Viewer + scoring done
-  (`webapp.py` + `web/`, stdlib server reusing `score_v2.run`); in-browser
-  polygon editing of submissions is the next step.
+- [x] Add web submission and visualization UI. `webapp.py` + `web/` (stdlib
+  server reusing `score_v2.run`) now includes an in-browser editor: draw/drag
+  zones, transit, facilities; undo/redo; live area/coordinate readout; overlap
+  warning; grouped zone palette/labels; and an editable event layer that scores
+  through the real scorer via the `events` override on `POST /api/score`.
+  Remaining polish: snapping/grid, in-canvas station/hub editing, leaderboard
+  and side-by-side comparison views.
 
 ## Terrain Fidelity Note
 

@@ -1,6 +1,8 @@
 "use strict";
 
-// Palette mirrored from render2.py so the web viewer matches the PNG renderer.
+/* ===========================================================================
+ * Palette — mirrored from render2.py so the editor matches the PNG renderer.
+ * ======================================================================== */
 const TERRAIN_COLORS = {
   ".": "#eef0ea", "T": "#cfe3c4", "F": "#e9dfaa",
   "w": "#b9d8c8", "^": "#cfcdc9", "~": "#a9d2ee",
@@ -18,54 +20,148 @@ const ZONE_KR = {
   INDUSTRIAL: "산업", LOGISTICS: "물류", PUBLIC: "공공", PARK: "공원",
   GREENBELT: "그린벨트",
 };
-// type -> [color, core width, dashed]
-const ROAD = {
+// Zone categories for a clearer, grouped palette + legend.
+const ZONE_CATS = [
+  ["중심·상업", ["CBD", "COMMERCIAL"]],
+  ["주거", ["RES_HIGH", "RES_MED", "RES_LOW", "SUBURB"]],
+  ["산업·물류", ["INDUSTRIAL", "LOGISTICS"]],
+  ["공공·교육·의료", ["UNIVERSITY", "MEDICAL", "PUBLIC"]],
+  ["녹지", ["PARK", "GREENBELT"]],
+];
+const ROAD = { // type -> [color, core width, dashed]
   arterial: ["#c8ccd2", 0.9, false], brt: ["#2aa0dc", 2.2, false],
   rail: ["#8a8f98", 1.8, true], freight_rail: ["#9c7b5a", 1.8, true],
   highway: ["#ffffff", 3.0, false], subway: ["#1f2430", 2.6, false],
+};
+const TRANSIT_KR = {
+  subway: "지하철", brt: "BRT", rail: "철도", freight_rail: "화물철도",
+  highway: "고속도로", arterial: "간선도로",
 };
 const FAC = {
   airport: ["A", "#3a7bd5"], port: ["P", "#2a6f97"],
   freight_terminal: ["F", "#9c6b3f"], power: ["E", "#e0a020"],
   water_treatment: ["W", "#3aa0c0"], waste: ["X", "#7a8a5a"],
 };
-const EVENT_VIS = {
-  mineral_deposit: ["M", "opportunity"], deep_harbor: ["H", "opportunity"],
-  oil_field: ["O", "mixed"], fault_line: ["!", "hazard"],
-  floodplain: ["F", "mixed"], heritage_site: ["G", "mixed"],
-  natural_reserve: ["N", "mixed"], landslide_zone: ["L", "hazard"],
-  typhoon_corridor: ["T", "hazard"], wind_corridor: ["W", "opportunity"],
-  aquifer_recharge: ["A", "mixed"], scenic_viewpoint: ["V", "opportunity"],
-  geothermal_spring: ["S", "opportunity"], fertile_soil: ["Y", "mixed"],
-  subsidence_zone: ["D", "hazard"], bridge_chokepoint: ["B", "opportunity"],
-};
-const EVENT_KR = {
-  mineral_deposit: "광맥", deep_harbor: "심해항", oil_field: "유전", fault_line: "단층",
-  floodplain: "범람원", heritage_site: "유산지", natural_reserve: "보호구역",
-  landslide_zone: "산사태", typhoon_corridor: "태풍", wind_corridor: "풍력",
-  aquifer_recharge: "대수층", scenic_viewpoint: "경관", geothermal_spring: "온천",
-  fertile_soil: "비옥토", subsidence_zone: "침하", bridge_chokepoint: "교량지점",
+const FAC_KR = {
+  airport: "공항", port: "항만", freight_terminal: "화물터미널",
+  power: "발전소", water_treatment: "정수장", waste: "폐기물",
 };
 const RING = { opportunity: "#3fae54", hazard: "#e05050", mixed: "#e0a020" };
+const CLASS_KR = { opportunity: "기회(보너스)", hazard: "재난(페널티)", mixed: "양면" };
+
+// Event metadata: letter, class, Korean name, and a plain effect description.
+const EVENT_INFO = {
+  mineral_deposit:  ["M", "opportunity", "광맥(자원 발견)", "반경 내 산업·물류를 배치하면 +점수"],
+  deep_harbor:      ["H", "opportunity", "심해항", "항만 시설 + 인근 산업 배치 시 +점수"],
+  wind_corridor:    ["W", "opportunity", "풍력회랑", "발전소 배치 시 +, 고밀·CBD는 -"],
+  scenic_viewpoint: ["V", "opportunity", "경관 명소", "저밀·녹지·공공은 +, 산업·고밀은 -"],
+  geothermal_spring:["S", "opportunity", "온천", "대학·의료·공공·공원은 +, 산업은 -"],
+  bridge_chokepoint:["B", "opportunity", "교량 요충", "도로망·허브가 인접하면 +"],
+  oil_field:        ["O", "mixed", "유전", "산업 배치 시 +경제 / -환경(오염)"],
+  floodplain:       ["F", "mixed", "범람원(침수 위험)", "녹지는 +(완충), 주거는 -(침수)"],
+  heritage_site:    ["G", "mixed", "유산지", "공원·저밀은 +, 산업·고밀은 -"],
+  natural_reserve:  ["N", "mixed", "보호구역", "녹지는 +, 개발은 강한 -"],
+  aquifer_recharge: ["A", "mixed", "대수층", "정수장·녹지는 +, 오염·인구는 -"],
+  fertile_soil:     ["Y", "mixed", "비옥토", "저밀·녹지는 +, 산업·고밀은 -"],
+  fault_line:       ["!", "hazard", "단층", "주거·산업을 올리면 -(붕괴 위험)"],
+  landslide_zone:   ["L", "hazard", "산사태 위험", "개발하면 -"],
+  typhoon_corridor: ["T", "hazard", "태풍 통로", "개발은 -, 녹지 완충은 +"],
+  subsidence_zone:  ["D", "hazard", "침하 위험", "개발은 강한 -, 녹지 완충은 +"],
+};
 const AXES = ["economy", "transport", "environment", "housing", "urban_form"];
 const AXIS_KR = {
   economy: "경제", transport: "교통", environment: "환경",
   housing: "주거", urban_form: "도시구조",
 };
 
-const state = { terrain: null, terrainFile: null, submission: null };
+const EMPTY_SUB = () => ({ zones: [], facilities: [], transit: [], stations: [], hubs: [] });
+
+/* ===========================================================================
+ * State
+ * ======================================================================== */
+const state = {
+  terrain: null, terrainFile: null,
+  submission: EMPTY_SUB(),
+  events: [],                 // editable working copy of terrain events
+  mode: "select",
+  drawUse: "CBD", drawTransit: "subway", drawFacility: "airport", drawEvent: "mineral_deposit",
+  draft: null,                // in-progress {kind:'zone'|'transit', pts:[[m,m]...]}
+  sel: null,                  // {kind, index}
+  drag: null,                 // {kind, index, vi?}
+  history: [], redo: [],
+  lastResult: null,
+  g: null,                    // current geometry (set in draw)
+  mouse: null,                // last mouse [m,m]
+};
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("map");
 const ctx = canvas.getContext("2d");
 
 function setStatus(msg, kind = "") {
-  const el = $("status");
-  el.textContent = msg;
-  el.className = "status" + (kind ? " " + kind : "");
+  $("status").textContent = msg;
+  $("status").className = "status" + (kind ? " " + kind : "");
 }
 
-// --- data loading ---------------------------------------------------------
+/* ===========================================================================
+ * Geometry / coordinate conversion
+ * ======================================================================== */
+function geom() {
+  const t = state.terrain;
+  const cell = t.cell_size_m;
+  const w = t.width || t.rows[0].length;
+  const h = t.height || t.rows.length;
+  const cpx = Math.max(3, Math.round(900 / w));
+  return { cell, w, h, cpx, mx: (m) => (m / cell) * cpx, my: (m) => (m / cell) * cpx };
+}
+function evtPx(e) {
+  const r = canvas.getBoundingClientRect();
+  return [(e.clientX - r.left) * (canvas.width / r.width),
+          (e.clientY - r.top) * (canvas.height / r.height)];
+}
+function evtMeters(e) {
+  const [px, py] = evtPx(e);
+  const g = state.g;
+  return [px / g.cpx * g.cell, py / g.cpx * g.cell];
+}
+function polyAreaKm2(poly) {
+  let a = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length];
+    a += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(a) / 2 / 1e6;
+}
+function polylineKm(pts) {
+  let d = 0;
+  for (let i = 1; i < pts.length; i++)
+    d += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  return d / 1000;
+}
+function pointInPoly(pt, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (((yi > pt[1]) !== (yj > pt[1])) &&
+        (pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function segInt(a, b, c, d) {
+  const cc = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+  return cc(a, b, c) !== cc(a, b, d) && cc(c, d, a) !== cc(c, d, b);
+}
+function polysOverlap(p, q) {
+  if (p.some((v) => pointInPoly(v, q)) || q.some((v) => pointInPoly(v, p))) return true;
+  for (let i = 0; i < p.length; i++)
+    for (let j = 0; j < q.length; j++)
+      if (segInt(p[i], p[(i + 1) % p.length], q[j], q[(j + 1) % q.length])) return true;
+  return false;
+}
+
+/* ===========================================================================
+ * Data loading / export
+ * ======================================================================== */
 async function loadTerrainList() {
   const list = await (await fetch("/api/terrains")).json();
   const sel = $("terrain-select");
@@ -78,87 +174,103 @@ async function loadTerrainList() {
   });
   if (list.length) await selectTerrain(list[0].file);
 }
-
 async function selectTerrain(file) {
   state.terrainFile = file;
   state.terrain = await (await fetch("/api/terrain?file=" + encodeURIComponent(file))).json();
-  state.submission = null;
-  $("btn-score").disabled = true;
-  resetPanel();
-  draw();
-  setStatus("지형 로드됨. 기준 제출물을 불러오거나 JSON을 업로드하세요.");
+  state.submission = EMPTY_SUB();
+  state.events = JSON.parse(JSON.stringify(state.terrain.events || []));
+  state.history = []; state.redo = []; state.sel = null; state.draft = null; state.lastResult = null;
+  state.g = geom();
+  refreshButtons(); resetPanel(); hideInspector(); draw();
+  setStatus("지형 로드됨. 도구로 그리거나 기준 제출물을 불러오세요.");
 }
-
 async function loadReference() {
   if (!state.terrainFile) return;
   setStatus("기준 제출물 생성 중…");
-  const res = await fetch("/api/reference?file=" + encodeURIComponent(state.terrainFile));
-  const sub = await res.json();
-  if (sub.error) { setStatus(sub.error, "err"); return; }
-  state.submission = sub;
-  draw();
-  await scoreNow();
+  const sub = await (await fetch("/api/reference?file=" + encodeURIComponent(state.terrainFile))).json();
+  if (sub.error) return setStatus(sub.error, "err");
+  delete sub.metadata;
+  state.submission = Object.assign(EMPTY_SUB(), sub);
+  state.history = []; state.redo = []; refreshButtons();
+  draw(); await scoreNow();
 }
-
 function loadSubmissionFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      state.submission = JSON.parse(reader.result);
+      const obj = JSON.parse(reader.result);
+      state.submission = Object.assign(EMPTY_SUB(), obj);
+      if (Array.isArray(obj.events)) state.events = obj.events;
+      state.history = []; state.redo = []; refreshButtons();
       $("btn-score").disabled = false;
       draw();
       setStatus("제출물 로드됨. ‘채점’을 누르세요.", "ok");
-    } catch (e) {
-      setStatus("JSON 파싱 실패: " + e.message, "err");
-    }
+    } catch (e) { setStatus("JSON 파싱 실패: " + e.message, "err"); }
   };
   reader.readAsText(file);
 }
-
-async function scoreNow() {
-  if (!state.submission || !state.terrainFile) return;
-  setStatus("채점 중…");
-  const res = await fetch("/api/score", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ terrain_file: state.terrainFile, submission: state.submission }),
-  });
-  const result = await res.json();
-  if (result.error) { setStatus(result.error, "err"); return; }
-  renderPanel(result);
-  setStatus(result.status === "OK" ? `채점 완료 — ${result.score} (${result.grade})`
-                                   : "게이트 실패", result.status === "OK" ? "ok" : "err");
+function exportJSON() {
+  const out = Object.assign({}, state.submission, { events: state.events });
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.terrainFile || "submission").replace(/^terrain_/, "sub_");
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
-// --- canvas drawing -------------------------------------------------------
-function geom() {
-  const t = state.terrain;
-  const cell = t.cell_size_m;
-  const w = t.width || t.rows[0].length;
-  const h = t.height || t.rows.length;
-  const cpx = Math.max(3, Math.round(900 / w)); // pixels per cell
-  return { cell, w, h, cpx, mx: (m) => (m / cell) * cpx, my: (m) => (m / cell) * cpx };
+/* ===========================================================================
+ * History (undo / redo)
+ * ======================================================================== */
+function snapshot() {
+  return JSON.stringify({ sub: state.submission, events: state.events });
+}
+function restore(snap) {
+  const o = JSON.parse(snap);
+  state.submission = o.sub; state.events = o.events;
+  state.sel = null; state.draft = null;
+}
+function pushHistory() { state.history.push(snapshot()); state.redo = []; refreshButtons(); }
+function undo() {
+  if (!state.history.length) return;
+  state.redo.push(snapshot());
+  restore(state.history.pop());
+  refreshButtons(); hideInspector(); draw();
+}
+function redo() {
+  if (!state.redo.length) return;
+  state.history.push(snapshot());
+  restore(state.redo.pop());
+  refreshButtons(); hideInspector(); draw();
+}
+function refreshButtons() {
+  $("btn-undo").disabled = !state.history.length;
+  $("btn-redo").disabled = !state.redo.length;
+  $("btn-delete").disabled = !state.sel;
+  $("btn-score").disabled = !state.terrainFile;
 }
 
+/* ===========================================================================
+ * Drawing
+ * ======================================================================== */
 function draw() {
   if (!state.terrain) return;
-  const g = geom();
+  const g = state.g = geom();
   canvas.width = g.w * g.cpx;
   canvas.height = g.h * g.cpx;
 
   drawTerrain(g);
-  if (state.submission) {
-    drawZones(g);
-    drawTransit(g);
-    drawFacilities(g);
-    drawStations(g);
-    drawHubs(g);
-  }
+  drawZones(g);
+  drawTransit(g);
+  drawFacilities(g);
+  drawStations(g);
+  drawHubs(g);
   drawEvents(g);
-  if (state.submission) drawZoneLabels(g);
+  drawDraft(g);
+  drawSelection(g);
+  drawZoneLabels(g);
   buildLegend();
 }
-
 function drawTerrain(g) {
   const rows = state.terrain.rows;
   const off = document.createElement("canvas");
@@ -178,83 +290,71 @@ function drawTerrain(g) {
   ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = true;
 }
-
+function tracePoly(g, poly) {
+  ctx.beginPath();
+  poly.forEach(([x, y], i) => { const px = g.mx(x), py = g.my(y); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+  ctx.closePath();
+}
 function drawZones(g) {
-  (state.submission.zones || []).forEach((z) => {
+  (state.submission.zones || []).forEach((z, i) => {
     const col = ZONE[z.use] || "#999999";
-    ctx.beginPath();
-    z.polygon.forEach(([x, y], i) => {
-      const px = g.mx(x), py = g.my(y);
-      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-    });
-    ctx.closePath();
-    ctx.fillStyle = col + "8c"; // ~55% alpha
+    tracePoly(g, z.polygon);
+    ctx.fillStyle = col + "8c";
     ctx.fill();
-    ctx.strokeStyle = shade(col, 0.7);
-    ctx.lineWidth = 1;
+    ctx.lineWidth = state.sel && state.sel.kind === "zone" && state.sel.index === i ? 2.5 : 1.2;
+    ctx.strokeStyle = state.sel && state.sel.kind === "zone" && state.sel.index === i ? "#ffffff" : shade(col, 0.65);
     ctx.stroke();
   });
 }
-
 function drawZoneLabels(g) {
-  ctx.font = "600 11px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.font = "700 11px system-ui, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
   (state.submission.zones || []).forEach((z) => {
     let cx = 0, cy = 0;
     z.polygon.forEach(([x, y]) => { cx += x; cy += y; });
     cx /= z.polygon.length; cy /= z.polygon.length;
-    const label = ZONE_KR[z.use] || z.use;
     const px = g.mx(cx), py = g.my(cy);
-    ctx.lineWidth = 3; ctx.strokeStyle = "#ffffffcc";
-    ctx.strokeText(label, px, py);
-    ctx.fillStyle = "#222428";
-    ctx.fillText(label, px, py);
+    const label = ZONE_KR[z.use] || z.use;
+    const col = ZONE[z.use] || "#999";
+    const w = ctx.measureText(label).width + 10;
+    roundRect(px - w / 2, py - 9, w, 18, 5);
+    ctx.fillStyle = col; ctx.fill();
+    ctx.fillStyle = luminance(col) > 0.6 ? "#1a1c20" : "#ffffff";
+    ctx.fillText(label, px, py + 0.5);
   });
 }
-
 function drawTransit(g) {
-  (state.submission.transit || []).forEach((line) => {
-    const spec = ROAD[line.type] || ["#bbbbbb", 1.0, false];
-    const [col, core, dashed] = spec;
+  (state.submission.transit || []).forEach((line, i) => {
+    const [col, core, dashed] = ROAD[line.type] || ["#bbbbbb", 1.0, false];
     ctx.beginPath();
-    line.path.forEach(([x, y], i) => {
-      const px = g.mx(x), py = g.my(y);
-      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-    });
+    line.path.forEach(([x, y], k) => { const px = g.mx(x), py = g.my(y); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
     ctx.setLineDash(dashed ? [6, 5] : []);
     ctx.lineWidth = Math.max(1.4, core * g.cpx * 0.5);
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.strokeStyle = col;
+    ctx.lineJoin = ctx.lineCap = "round";
+    ctx.strokeStyle = state.sel && state.sel.kind === "transit" && state.sel.index === i ? "#ffffff" : col;
     ctx.stroke();
   });
   ctx.setLineDash([]);
 }
-
 function drawFacilities(g) {
-  (state.submission.facilities || []).forEach((f) => {
+  (state.submission.facilities || []).forEach((f, i) => {
     const [letter, col] = FAC[f.type] || ["?", "#888888"];
     const px = g.mx(f.x), py = g.my(f.y), r = 9;
     roundRect(px - r, py - r, 2 * r, 2 * r, 3);
     ctx.fillStyle = "#ffffff"; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke();
-    ctx.fillStyle = col;
-    ctx.font = "700 11px system-ui, sans-serif";
+    ctx.lineWidth = state.sel && state.sel.kind === "facility" && state.sel.index === i ? 3 : 2;
+    ctx.strokeStyle = col; ctx.stroke();
+    ctx.fillStyle = col; ctx.font = "700 11px system-ui, sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(letter, px, py + 0.5);
   });
 }
-
 function drawStations(g) {
   ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#222428"; ctx.lineWidth = 1;
   (state.submission.stations || []).forEach((s) => {
-    ctx.beginPath();
-    ctx.arc(g.mx(s.x), g.my(s.y), 3, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(g.mx(s.x), g.my(s.y), 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   });
 }
-
 function drawHubs(g) {
   (state.submission.hubs || []).forEach((hb) => {
     const px = g.mx(hb.x), py = g.my(hb.y);
@@ -263,46 +363,295 @@ function drawHubs(g) {
     ctx.lineWidth = 2; ctx.strokeStyle = "#ffffff"; ctx.stroke();
   });
 }
-
 function drawEvents(g) {
-  (state.terrain.events || []).forEach((e) => {
-    const [letter, defClass] = EVENT_VIS[e.type] || [(e.type || "?")[0].toUpperCase(), "mixed"];
-    const klass = e.class || defClass;
+  state.events.forEach((e, i) => {
+    const [letter, defk] = EVENT_INFO[e.type] || [(e.type || "?")[0].toUpperCase(), "mixed"];
+    const klass = e.class || defk;
     const col = RING[klass] || RING.mixed;
     const px = g.mx(e.x), py = g.my(e.y);
     const rr = (e.radius || 0) / g.cell * g.cpx;
+    const selected = state.sel && state.sel.kind === "event" && state.sel.index === i;
     if (rr > 2) {
       ctx.beginPath(); ctx.arc(px, py, rr, 0, Math.PI * 2);
-      ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5; ctx.strokeStyle = col; ctx.stroke();
+      ctx.fillStyle = col + (selected ? "22" : "12");
+      ctx.fill();
+      ctx.setLineDash([4, 4]); ctx.lineWidth = selected ? 2 : 1.5; ctx.strokeStyle = col; ctx.stroke();
       ctx.setLineDash([]);
     }
     ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2);
     ctx.fillStyle = "#ffffff"; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke();
+    ctx.lineWidth = selected ? 3 : 2; ctx.strokeStyle = col; ctx.stroke();
     ctx.fillStyle = col; ctx.font = "700 11px system-ui, sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(letter, px, py + 0.5);
   });
 }
-
+function drawDraft(g) {
+  if (!state.draft) return;
+  const pts = state.draft.pts;
+  const isZone = state.draft.kind === "zone";
+  const col = isZone ? (ZONE[state.drawUse] || "#fff") : (ROAD[state.drawTransit] || ["#fff"])[0];
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => { const px = g.mx(x), py = g.my(y); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+  if (state.mouse) ctx.lineTo(g.mx(state.mouse[0]), g.my(state.mouse[1]));
+  ctx.setLineDash([5, 4]); ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke();
+  ctx.setLineDash([]);
+  pts.forEach(([x, y], i) => {
+    const px = g.mx(x), py = g.my(y);
+    ctx.beginPath(); ctx.arc(px, py, i === 0 ? 6 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = i === 0 ? "#ffd95a" : "#ffffff"; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = "#1a1c20"; ctx.stroke();
+  });
+}
+function drawSelection(g) {
+  if (!state.sel || state.sel.kind !== "zone") return;
+  const z = state.submission.zones[state.sel.index];
+  if (!z) return;
+  z.polygon.forEach(([x, y]) => {
+    const px = g.mx(x), py = g.my(y);
+    ctx.beginPath(); ctx.rect(px - 4, py - 4, 8, 8);
+    ctx.fillStyle = "#ffffff"; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = "#1a1c20"; ctx.stroke();
+  });
+}
 function buildLegend() {
-  const items = [];
-  const used = new Set((state.submission?.zones || []).map((z) => z.use));
-  if (used.size === 0) Object.keys(ZONE).forEach((k) => used.add(k));
-  used.forEach((u) => items.push([ZONE[u] || "#999", ZONE_KR[u] || u]));
-  const html = items.map(([c, label]) =>
-    `<span class="item"><span class="sw" style="background:${c}"></span>${label}</span>`).join("");
-  const terr = `<span class="item"><span class="sw" style="background:${TERRAIN_COLORS["~"]}"></span>수면</span>` +
-               `<span class="item"><span class="sw" style="background:${TERRAIN_COLORS["^"]}"></span>급경사</span>` +
-               `<span class="item"><span class="sw" style="background:${TERRAIN_COLORS["T"]}"></span>숲</span>`;
-  $("legend").innerHTML = terr + html;
+  const used = new Set((state.submission.zones || []).map((z) => z.use));
+  const parts = ZONE_CATS.map(([cat, uses]) => {
+    const chips = uses.map((u) =>
+      `<span class="item${used.has(u) ? " on" : ""}"><span class="sw" style="background:${ZONE[u]}"></span>${ZONE_KR[u]}</span>`).join("");
+    return `<div class="legrow"><b>${cat}</b>${chips}</div>`;
+  }).join("");
+  const terr = `<div class="legrow"><b>지형</b>` +
+    [["~", "수면"], ["^", "급경사"], ["T", "숲"], ["w", "습지"], ["F", "농지"]]
+      .map(([k, n]) => `<span class="item"><span class="sw" style="background:${TERRAIN_COLORS[k]}"></span>${n}</span>`).join("") + `</div>`;
+  $("legend").innerHTML = terr + parts;
 }
 
-// --- score panel ----------------------------------------------------------
+/* ===========================================================================
+ * Interaction
+ * ======================================================================== */
+function setMode(mode) {
+  state.mode = mode;
+  state.draft = null;
+  document.querySelectorAll(".tool").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+  ["zone", "transit", "facility", "event"].forEach((m) =>
+    $("palette-" + m).classList.toggle("hidden", m !== mode));
+  canvas.style.cursor = mode === "select" ? "default" : "crosshair";
+  draw();
+}
+function hitVertex(px, py, poly) {
+  for (let i = 0; i < poly.length; i++) {
+    if (Math.hypot(state.g.mx(poly[i][0]) - px, state.g.my(poly[i][1]) - py) <= 7) return i;
+  }
+  return -1;
+}
+function hitPoint(px, py, arr, radius = 10) {
+  for (let i = arr.length - 1; i >= 0; i--)
+    if (Math.hypot(state.g.mx(arr[i].x) - px, state.g.my(arr[i].y) - py) <= radius) return i;
+  return -1;
+}
+function hitZone(m) {
+  for (let i = state.submission.zones.length - 1; i >= 0; i--)
+    if (pointInPoly(m, state.submission.zones[i].polygon)) return i;
+  return -1;
+}
+
+canvas.addEventListener("mousedown", (e) => {
+  if (!state.terrain) return;
+  const m = evtMeters(e), [px, py] = evtPx(e);
+
+  if (state.mode === "select") {
+    // 1) dragging a vertex of the selected zone
+    if (state.sel && state.sel.kind === "zone") {
+      const vi = hitVertex(px, py, state.submission.zones[state.sel.index].polygon);
+      if (vi >= 0) { pushHistory(); state.drag = { kind: "zonevtx", index: state.sel.index, vi }; return; }
+    }
+    // 2) events (also draggable)
+    const ei = hitPoint(px, py, state.events, 11);
+    if (ei >= 0) { state.sel = { kind: "event", index: ei }; showEventInspector(ei); pushHistory(); state.drag = { kind: "event", index: ei }; refreshButtons(); draw(); return; }
+    // 3) facilities (draggable)
+    const fi = hitPoint(px, py, state.submission.facilities);
+    if (fi >= 0) { state.sel = { kind: "facility", index: fi }; hideInspector(); pushHistory(); state.drag = { kind: "facility", index: fi }; refreshButtons(); draw(); return; }
+    // 4) select a zone
+    const zi = hitZone(m);
+    state.sel = zi >= 0 ? { kind: "zone", index: zi } : null;
+    hideInspector(); refreshButtons(); draw();
+    return;
+  }
+
+  if (state.mode === "zone") {
+    if (!state.draft) state.draft = { kind: "zone", pts: [] };
+    const pts = state.draft.pts;
+    if (pts.length >= 3 && Math.hypot(state.g.mx(pts[0][0]) - px, state.g.my(pts[0][1]) - py) <= 8) {
+      commitDraft();                 // auto-close: clicked near first vertex
+    } else { pts.push(m); draw(); }
+    return;
+  }
+  if (state.mode === "transit") {
+    if (!state.draft) state.draft = { kind: "transit", pts: [] };
+    state.draft.pts.push(m); draw();
+    return;
+  }
+  if (state.mode === "facility") {
+    pushHistory();
+    state.submission.facilities.push({ type: state.drawFacility, x: round(m[0]), y: round(m[1]) });
+    draw(); return;
+  }
+  if (state.mode === "event") {
+    pushHistory();
+    const info = EVENT_INFO[state.drawEvent];
+    state.events.push({
+      type: state.drawEvent, x: round(m[0]), y: round(m[1]),
+      radius: Math.max(500, parseInt($("event-radius").value, 10) || 4000),
+      class: info ? info[1] : "mixed", name: info ? info[2] : state.drawEvent,
+    });
+    state.sel = { kind: "event", index: state.events.length - 1 };
+    showEventInspector(state.sel.index); refreshButtons(); draw();
+  }
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (!state.terrain) return;
+  const m = evtMeters(e);
+  state.mouse = m;
+  if (state.drag) {
+    if (state.drag.kind === "zonevtx") {
+      state.submission.zones[state.drag.index].polygon[state.drag.vi] = [round(m[0]), round(m[1])];
+    } else if (state.drag.kind === "event") {
+      const ev = state.events[state.drag.index]; ev.x = round(m[0]); ev.y = round(m[1]);
+    } else if (state.drag.kind === "facility") {
+      const f = state.submission.facilities[state.drag.index]; f.x = round(m[0]); f.y = round(m[1]);
+    }
+    draw();
+  } else if (state.draft) {
+    draw();
+  }
+  updateReadout(m);
+});
+
+canvas.addEventListener("mouseup", () => { state.drag = null; });
+canvas.addEventListener("dblclick", (e) => { e.preventDefault(); if (state.draft) commitDraft(); });
+canvas.addEventListener("mouseleave", () => { state.mouse = null; if (!state.drag) updateReadout(null); });
+
+function updateReadout(m) {
+  const out = $("readout");
+  if (!m) { out.textContent = state.terrain ? `${state.g.w}×${state.g.h} 셀 · ${state.g.cell}m/셀` : ""; return; }
+  let txt = `x ${round(m[0])} · y ${round(m[1])} m`;
+  if (state.draft && state.draft.kind === "zone" && state.draft.pts.length >= 2) {
+    txt += ` · 면적 ${polyAreaKm2([...state.draft.pts, m]).toFixed(2)} km²`;
+  } else if (state.draft && state.draft.kind === "transit" && state.draft.pts.length >= 1) {
+    txt += ` · 길이 ${polylineKm([...state.draft.pts, m]).toFixed(2)} km`;
+  } else if (state.drag && state.drag.kind === "zonevtx") {
+    txt += ` · 면적 ${polyAreaKm2(state.submission.zones[state.drag.index].polygon).toFixed(2)} km²`;
+  }
+  out.textContent = txt;
+}
+
+function commitDraft() {
+  const d = state.draft; state.draft = null;
+  if (!d) return;
+  if (d.kind === "zone") {
+    if (d.pts.length < 3) { draw(); return; }
+    pushHistory();
+    const poly = d.pts.map((p) => [round(p[0]), round(p[1])]);
+    state.submission.zones.push({ use: state.drawUse, polygon: poly });
+    checkOverlap(poly);
+  } else {
+    if (d.pts.length < 2) { draw(); return; }
+    pushHistory();
+    state.submission.transit.push({ type: state.drawTransit, path: d.pts.map((p) => [round(p[0]), round(p[1])]) });
+  }
+  draw();
+}
+function checkOverlap(poly) {
+  const others = state.submission.zones.slice(0, -1);
+  const hit = others.some((z) => polysOverlap(poly, z.polygon));
+  const warn = $("warn");
+  if (hit) {
+    warn.textContent = "⚠ 새 구역이 기존 구역과 겹칩니다. 채점 시 나중에 그린 구역이 우선합니다.";
+    warn.classList.remove("hidden");
+    clearTimeout(checkOverlap._t);
+    checkOverlap._t = setTimeout(() => warn.classList.add("hidden"), 4000);
+  } else warn.classList.add("hidden");
+}
+function deleteSelected() {
+  if (!state.sel) return;
+  pushHistory();
+  const { kind, index } = state.sel;
+  if (kind === "zone") state.submission.zones.splice(index, 1);
+  else if (kind === "transit") state.submission.transit.splice(index, 1);
+  else if (kind === "facility") state.submission.facilities.splice(index, 1);
+  else if (kind === "event") state.events.splice(index, 1);
+  state.sel = null; hideInspector(); refreshButtons(); draw();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); return e.shiftKey ? redo() : undo(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); return redo(); }
+  if (e.key === "Enter") { if (state.draft) commitDraft(); return; }
+  if (e.key === "Escape") { state.draft = null; state.sel = null; hideInspector(); draw(); return; }
+  if (e.key === "Delete" || e.key === "Backspace") { deleteSelected(); return; }
+  const map = { v: "select", z: "zone", t: "transit", f: "facility", e: "event" };
+  if (map[e.key.toLowerCase()]) setMode(map[e.key.toLowerCase()]);
+});
+
+/* ===========================================================================
+ * Inspector (event details + score impact)
+ * ======================================================================== */
+function eventResultFor(idx) {
+  if (!state.lastResult || !state.lastResult.events) return null;
+  const ev = state.events[idx];
+  // match by type + nearest coordinate among results of same type
+  const same = state.lastResult.events.filter((r) => r.type === ev.type);
+  return same.length ? same[Math.min(idx, same.length - 1)] : null;
+}
+function showEventInspector(idx) {
+  const ev = state.events[idx];
+  if (!ev) return hideInspector();
+  const info = EVENT_INFO[ev.type] || ["?", "mixed", ev.type, ""];
+  const col = RING[info[1]] || RING.mixed;
+  const r = eventResultFor(idx);
+  let impact = `<div class="imp muted">채점하면 점수 반영이 표시됩니다.</div>`;
+  if (r) {
+    const cls = r.net > 0 ? "pos" : r.net < 0 ? "neg" : "";
+    impact = `<div class="imp">점수 반영 <span class="net ${cls}">${r.net > 0 ? "+" : ""}${r.net}</span>
+      <span class="muted">(+${r.gain} / −${r.loss})</span></div>`;
+  }
+  $("inspector").innerHTML = `
+    <div class="ins-head"><span class="dot" style="background:${col}"></span>
+      <b>${info[2]}</b><span class="chip" style="border-color:${col};color:${col}">${CLASS_KR[info[1]]}</span></div>
+    <div class="muted desc">${info[3]}</div>
+    <div class="ins-kv"><span>좌표</span><span>${round(ev.x)}, ${round(ev.y)} m</span></div>
+    <div class="ins-kv"><span>반경</span><span>${ev.radius} m</span></div>
+    ${impact}
+    <div class="ins-actions"><button id="ins-del">이 이벤트 삭제</button></div>`;
+  $("inspector").classList.remove("hidden");
+  $("ins-del").addEventListener("click", () => { state.sel = { kind: "event", index: idx }; deleteSelected(); });
+}
+function hideInspector() { $("inspector").classList.add("hidden"); }
+
+/* ===========================================================================
+ * Scoring + panel
+ * ======================================================================== */
+async function scoreNow() {
+  if (!state.terrainFile) return;
+  setStatus("채점 중…");
+  const res = await fetch("/api/score", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ terrain_file: state.terrainFile, submission: state.submission, events: state.events }),
+  });
+  const result = await res.json();
+  if (result.error) return setStatus(result.error, "err");
+  state.lastResult = result;
+  renderPanel(result);
+  if (state.sel && state.sel.kind === "event") showEventInspector(state.sel.index);
+  setStatus(result.status === "OK" ? `채점 완료 — ${result.score} (${result.grade})` : "게이트 실패",
+            result.status === "OK" ? "ok" : "err");
+}
 function resetPanel() {
-  $("panel").innerHTML = '<div class="placeholder">제출물을 불러오면 점수가 표시됩니다.</div>';
+  $("panel").innerHTML = '<div class="placeholder">도구로 그리거나 제출물을 불러온 뒤 ‘채점’을 누르세요.</div>';
 }
-
 function renderPanel(r) {
   const panel = $("panel");
   if (r.status !== "OK") {
@@ -316,19 +665,15 @@ function renderPanel(r) {
       <div class="bar"><span style="width:${Math.min(100, v / 2)}%"></span></div></div>`;
   }).join("");
   const events = (r.events || []).map((e) => {
-    const klass = e.class || (EVENT_VIS[e.type] || [null, "mixed"])[1];
-    const name = EVENT_KR[e.type] || e.type;
-    const net = e.net || 0;
-    const cls = net > 0 ? "pos" : net < 0 ? "neg" : "";
-    const sign = net > 0 ? "+" : "";
-    return `<div class="event"><span class="nm"><span class="dot" style="background:${RING[klass] || RING.mixed}"></span>${name}</span>
-      <span class="net ${cls}">${sign}${net}</span></div>`;
+    const info = EVENT_INFO[e.type] || ["?", "mixed", e.type, ""];
+    const net = e.net || 0, cls = net > 0 ? "pos" : net < 0 ? "neg" : "";
+    return `<div class="event" title="${esc(info[3])}"><span class="nm"><span class="dot" style="background:${RING[info[1]] || RING.mixed}"></span>${info[2]}</span>
+      <span class="net ${cls}">${net > 0 ? "+" : ""}${net}</span></div>`;
   }).join("");
   const kv = (k, v) => `<div class="kv"><span class="k">${k}</span><span>${v}</span></div>`;
   const s = r.stats || {};
   panel.innerHTML = `
-    <div class="score-head"><span class="score">${r.score}</span>
-      <span class="grade ${r.grade}">${r.grade}</span></div>
+    <div class="score-head"><span class="score">${r.score}</span><span class="grade ${r.grade}">${r.grade}</span></div>
     <div class="objective">${esc(r.objective || "")}</div>
     <div class="axes">${axes}</div>
     ${kv("기본 점수(1000)", r.base_1000)}
@@ -337,37 +682,71 @@ function renderPanel(r) {
     ${kv("난이도", `${r.difficulty}${r.effective_difficulty ? " → ×" + r.effective_difficulty : ""}`)}
     ${kv("인구 / 일자리", `${fmt(s.residents)} / ${fmt(s.jobs)}`)}
     ${kv("예산 사용", `${fmt(s.spent)} / ${fmt(s.budget)}`)}
-    ${events ? `<h3>이벤트</h3><div class="events">${events}</div>` : ""}`;
+    ${events ? `<h3>이벤트 점수 반영</h3><div class="events">${events}</div>` : ""}`;
 }
 
-// --- small utilities ------------------------------------------------------
-function hexRgb(hex) {
-  const h = hex.replace("#", "");
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
-function shade(hex, f) {
-  const [r, g, b] = hexRgb(hex);
-  const c = (v) => ("0" + Math.round(v * f).toString(16)).slice(-2);
-  return "#" + c(r) + c(g) + c(b);
-}
+/* ===========================================================================
+ * Utilities
+ * ======================================================================== */
+function hexRgb(hex) { const h = hex.replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+function shade(hex, f) { const [r, g, b] = hexRgb(hex); const c = (v) => ("0" + Math.round(v * f).toString(16)).slice(-2); return "#" + c(r) + c(g) + c(b); }
+function luminance(hex) { const [r, g, b] = hexRgb(hex); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }
 function roundRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
+function round(n) { return Math.round(n); }
 function fmt(n) { return (n || 0).toLocaleString(); }
 function esc(s) { return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 
-// --- wire up --------------------------------------------------------------
+/* ===========================================================================
+ * Palettes + wiring
+ * ======================================================================== */
+function fillZonePalette() {
+  const sel = $("zone-use"); sel.innerHTML = "";
+  ZONE_CATS.forEach(([cat, uses]) => {
+    const og = document.createElement("optgroup"); og.label = cat;
+    uses.forEach((u) => { const o = document.createElement("option"); o.value = u; o.textContent = ZONE_KR[u]; og.appendChild(o); });
+    sel.appendChild(og);
+  });
+  sel.value = state.drawUse;
+}
+function fillSimple(id, obj, kr, cur) {
+  const sel = $(id); sel.innerHTML = "";
+  Object.keys(obj).forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = kr[k] || k; sel.appendChild(o); });
+  sel.value = cur;
+}
+function fillEventPalette() {
+  const sel = $("event-type"); sel.innerHTML = "";
+  [["opportunity", "기회(보너스)"], ["mixed", "양면"], ["hazard", "재난(페널티)"]].forEach(([klass, label]) => {
+    const og = document.createElement("optgroup"); og.label = label;
+    Object.keys(EVENT_INFO).filter((t) => EVENT_INFO[t][1] === klass).forEach((t) => {
+      const o = document.createElement("option"); o.value = t; o.textContent = EVENT_INFO[t][2]; og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+  sel.value = state.drawEvent;
+}
+
 $("terrain-select").addEventListener("change", (e) => selectTerrain(e.target.value));
 $("btn-reference").addEventListener("click", loadReference);
+$("btn-export").addEventListener("click", exportJSON);
 $("btn-score").addEventListener("click", scoreNow);
-$("file-input").addEventListener("change", (e) => {
-  if (e.target.files[0]) loadSubmissionFile(e.target.files[0]);
-});
+$("file-input").addEventListener("change", (e) => { if (e.target.files[0]) loadSubmissionFile(e.target.files[0]); });
+$("btn-undo").addEventListener("click", undo);
+$("btn-redo").addEventListener("click", redo);
+$("btn-delete").addEventListener("click", deleteSelected);
+$("btn-finish").addEventListener("click", () => { if (state.draft) commitDraft(); });
+document.querySelectorAll(".tool").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+$("zone-use").addEventListener("change", (e) => { state.drawUse = e.target.value; });
+$("transit-type").addEventListener("change", (e) => { state.drawTransit = e.target.value; });
+$("facility-type").addEventListener("change", (e) => { state.drawFacility = e.target.value; });
+$("event-type").addEventListener("change", (e) => { state.drawEvent = e.target.value; });
 
+fillZonePalette();
+fillSimple("transit-type", ROAD, TRANSIT_KR, state.drawTransit);
+fillSimple("facility-type", FAC, FAC_KR, state.drawFacility);
+fillEventPalette();
+setMode("select");
 loadTerrainList().catch((e) => setStatus("초기화 실패: " + e.message, "err"));

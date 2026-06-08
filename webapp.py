@@ -161,6 +161,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json({"error": "submission must be an object"}, 400)
         with open(path, encoding="utf-8") as f:
             terrain = json.load(f)
+        # Optional: the editor can override the scenario's events (add/move/remove)
+        # so the user can see how event placement changes the score.
+        if isinstance(payload.get("events"), list):
+            terrain = dict(terrain)
+            terrain["events"] = payload["events"]
         try:
             result = S.run(terrain, submission)
         except Exception as exc:
