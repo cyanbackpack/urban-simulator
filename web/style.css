@@ -93,6 +93,27 @@ table.lb .nm { max-width: 230px; overflow: hidden; text-overflow: ellipsis; whit
 .lb .mini > span { width: 100%; background: linear-gradient(180deg, #8fd14f, #5ab0e0); display: block; }
 .lb-load { font-size: 12px; padding: 4px 9px; }
 
+/* dashboard: terrain x objective matrix */
+.modal-box.wide { width: min(1040px, 96vw); }
+.dash-title { color: var(--text); text-transform: none; letter-spacing: 0; font-size: 14px; margin: 14px 0 8px; }
+.matrix-wrap { margin-bottom: 8px; }
+table.matrix { width: 100%; border-collapse: separate; border-spacing: 4px; font-size: 12px; }
+table.matrix th { color: var(--muted); font-weight: 600; font-size: 11px; padding: 4px 6px; text-align: center; }
+table.matrix th.rowh { text-align: left; color: #c7cdd6; white-space: nowrap; }
+table.matrix th.rowh .diff { color: var(--muted); font-weight: 400; margin-left: 5px; font-size: 10px; }
+.gcell { text-align: center; border-radius: 6px; padding: 6px 4px; color: #15171a; cursor: default; }
+.gcell .gg { font-weight: 800; font-size: 13px; display: block; line-height: 1.1; }
+.gcell .gs { font-size: 10px; opacity: .8; font-variant-numeric: tabular-nums; }
+.gcell.gS { background: #ffd95a; } .gcell.gA { background: #8fd14f; }
+.gcell.gB { background: #5ab0e0; } .gcell.gC { background: #e0a020; } .gcell.gD { background: #e07050; }
+.meancell { text-align: center; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.dash-summary { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.dash-summary .sumrow { display: flex; gap: 14px; align-items: center; font-size: 13px; padding: 4px 0; }
+.dash-summary .sumrow b { min-width: 170px; }
+.dash-summary .grade { font-size: 11px; font-weight: 700; color: #15171a; border-radius: 5px; padding: 1px 7px; margin-right: 2px; }
+.dash-summary .grade.S { background: #ffd95a; } .dash-summary .grade.A { background: #8fd14f; }
+.dash-summary .grade.B { background: #5ab0e0; } .dash-summary .grade.C { background: #e0a020; } .dash-summary .grade.D { background: #e07050; }
+
 main { display: flex; gap: 16px; padding: 16px 20px; align-items: flex-start; }
 
 .map-wrap { flex: 1 1 auto; min-width: 0; position: relative; }

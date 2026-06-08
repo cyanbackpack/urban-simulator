@@ -796,6 +796,87 @@ async function loadFromLeaderboard(file) {
 }
 
 /* ===========================================================================
+ * Multi-terrain comparison dashboard
+ * ======================================================================== */
+const SET_LABELS = { submissions_elite: "모범답안 (Elite)", submissions_reference: "베이스라인 (Reference)" };
+const OBJ_SHORT = {
+  "Financial Capital": "금융", "Logistics Hub": "물류", "Innovation City": "혁신",
+  "Tourism Capital": "관광", "Eco Metropolis": "환경",
+};
+const TERR_SHORT = {
+  lake_core: "호수권", twin_coast: "쌍해안", mountain_gate: "산악분지",
+  great_delta: "대삼각주", central_plain: "대평원",
+};
+const GRADE_ORDER = { S: 5, A: 4, B: 3, C: 2, D: 1 };
+
+async function openDashboard() {
+  const modal = $("dash-modal"), body = $("dash-body");
+  modal.classList.remove("hidden");
+  body.innerHTML = '<div class="placeholder">전 지형 × 전 목적 채점 중…</div>';
+  let data;
+  try {
+    data = await (await fetch("/api/dashboard")).json();
+  } catch (e) { body.innerHTML = `<div class="placeholder">${e}</div>`; return; }
+  if (data.error) { body.innerHTML = `<div class="placeholder">${data.error}</div>`; return; }
+
+  const setNames = Object.keys(data.sets);
+  $("dash-sub").textContent = setNames.map((s) => SET_LABELS[s] || s).join("  ·  ") +
+    "  —  같은 채점기(score_v2)로 25개 케이스를 즉시 채점";
+
+  let html = "";
+  for (const setName of setNames) {
+    html += renderMatrix(setName, data.sets[setName], data.terrain_keys, data.objectives);
+  }
+  // distribution summary across both sets
+  html += '<div class="dash-summary">';
+  for (const setName of setNames) {
+    const cells = data.sets[setName];
+    const dist = { S: 0, A: 0, B: 0, C: 0, D: 0 };
+    let sum = 0, ok = 0;
+    cells.forEach((c) => { dist[c.grade] = (dist[c.grade] || 0) + 1; if (c.status === "OK") { sum += c.score; ok++; } });
+    const chips = "SABCD".split("").filter((g) => dist[g]).map((g) =>
+      `<span class="grade ${g}">${g}</span>${dist[g]}`).join(" ");
+    html += `<div class="sumrow"><b>${SET_LABELS[setName] || setName}</b>
+      <span>${chips}</span>
+      <span class="muted">평균 ${ok ? (sum / ok).toFixed(0) : "—"} · ${cells.length}건</span></div>`;
+  }
+  html += "</div>";
+  body.innerHTML = html;
+}
+
+function renderMatrix(setName, cells, terrainKeys, objectives) {
+  const by = {};
+  cells.forEach((c) => { by[c.terrain + "|" + c.objective] = c; });
+  // per-terrain mean (rows are terrains, sorted by difficulty asc)
+  const terrMean = {};
+  terrainKeys.forEach((tk) => {
+    const row = cells.filter((c) => c.terrain === tk && c.status === "OK");
+    terrMean[tk] = row.length ? row.reduce((a, c) => a + c.score, 0) / row.length : 0;
+  });
+  const order = [...terrainKeys].sort((a, b) =>
+    (cells.find((c) => c.terrain === a)?.difficulty || 0) - (cells.find((c) => c.terrain === b)?.difficulty || 0));
+
+  let h = `<h3 class="dash-title">${SET_LABELS[setName] || setName}</h3>`;
+  h += '<table class="matrix"><thead><tr><th>지형 \\ 목적</th>';
+  objectives.forEach((o) => { h += `<th>${OBJ_SHORT[o] || o}</th>`; });
+  h += "<th>평균</th></tr></thead><tbody>";
+  for (const tk of order) {
+    const diff = cells.find((c) => c.terrain === tk)?.difficulty;
+    h += `<tr><th class="rowh">${TERR_SHORT[tk] || tk}<span class="diff">×${diff}</span></th>`;
+    for (const o of objectives) {
+      const c = by[tk + "|" + o];
+      if (!c) { h += "<td></td>"; continue; }
+      const g = c.status === "OK" ? c.grade : "D";
+      h += `<td class="gcell g${g}" title="${tk} · ${o}\n${c.score} (${g})">
+        <span class="gg">${g}</span><span class="gs">${Math.round(c.score)}</span></td>`;
+    }
+    h += `<td class="meancell">${Math.round(terrMean[tk])}</td></tr>`;
+  }
+  h += "</tbody></table>";
+  return `<div class="matrix-wrap">${h}</div>`;
+}
+
+/* ===========================================================================
  * Utilities
  * ======================================================================== */
 function hexRgb(hex) { const h = hex.replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
@@ -864,6 +945,9 @@ $("snap-step").addEventListener("change", (e) => { state.gridStep = parseInt(e.t
 $("btn-leaderboard").addEventListener("click", openLeaderboard);
 $("lb-close").addEventListener("click", () => $("lb-modal").classList.add("hidden"));
 $("lb-modal").addEventListener("click", (e) => { if (e.target.id === "lb-modal") $("lb-modal").classList.add("hidden"); });
+$("btn-dashboard").addEventListener("click", openDashboard);
+$("dash-close").addEventListener("click", () => $("dash-modal").classList.add("hidden"));
+$("dash-modal").addEventListener("click", (e) => { if (e.target.id === "dash-modal") $("dash-modal").classList.add("hidden"); });
 
 fillZonePalette();
 fillSimple("transit-type", ROAD, TRANSIT_KR, state.drawTransit);

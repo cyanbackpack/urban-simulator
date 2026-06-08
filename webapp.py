@@ -16,6 +16,9 @@ Endpoints:
     GET  /api/terrains         -> [{file, name, terrain_type, objective, ...}]
     GET  /api/terrain?file=..  -> terrain JSON
     GET  /api/reference?file=. -> a baseline reference submission for that terrain
+    GET  /api/leaderboard?...  -> batch-score a submissions dir for one terrain
+    GET  /api/dashboard[?dir=] -> elite vs baseline scored across the full
+                                  terrain x objective matrix
     POST /api/score            -> {terrain_file, submission} -> score_v2 result
 """
 
@@ -71,6 +74,67 @@ def _safe_sub_path(dir_name, file_name):
         return None
     path = os.path.join(base, name)
     return path if os.path.isfile(path) else None
+
+
+# Terrain key -> committed terrain file. A terrain's rows/events/targets do not
+# depend on the objective, so one file backs all five briefs for that terrain.
+TERRAIN_KEYS = {
+    "lake_core": "terrain_lake_core.json",
+    "twin_coast": "terrain_twin_coast.json",
+    "mountain_gate": "terrain_mountain_gate.json",
+    "great_delta": "terrain_great_delta.json",
+    "central_plain": "terrain_central_plain.json",
+}
+OBJECTIVE_SLUGS = {
+    "financial_capital": "Financial Capital",
+    "logistics_hub": "Logistics Hub",
+    "innovation_city": "Innovation City",
+    "tourism_capital": "Tourism Capital",
+    "eco_metropolis": "Eco Metropolis",
+}
+
+
+def parse_set_name(file_name):
+    """Map elite_<terrain>_<objective>.json -> (terrain_key, objective)."""
+    stem = os.path.basename(file_name)
+    if stem.endswith(".json"):
+        stem = stem[:-5]
+    tkey = next((k for k in TERRAIN_KEYS if f"_{k}_" in f"_{stem}_"), None)
+    obj = next((OBJECTIVE_SLUGS[s] for s in OBJECTIVE_SLUGS if stem.endswith(s)), None)
+    return tkey, obj
+
+
+def dashboard_matrix(dir_name):
+    """Score every <terrain>_<objective> submission in a set directory against
+    its terrain, returning a matrix and aggregates. Pure score_v2 (no numpy)."""
+    base = _safe_dir(dir_name)
+    if not base:
+        return None
+    terrain_cache = {}
+    cells = []
+    for path in sorted(glob.glob(os.path.join(base, "*.json"))):
+        tkey, obj = parse_set_name(path)
+        if not tkey or not obj:
+            continue
+        if tkey not in terrain_cache:
+            with open(os.path.join(ROOT, TERRAIN_KEYS[tkey]), encoding="utf-8") as f:
+                terrain_cache[tkey] = json.load(f)
+        terrain = dict(terrain_cache[tkey])
+        terrain["objective"] = obj
+        with open(path, encoding="utf-8") as f:
+            sub = json.load(f)
+        try:
+            r = S.run(terrain, sub)
+        except Exception as exc:
+            r = {"status": "ERROR", "score": 0, "grade": "D", "reasons": [str(exc)]}
+        cells.append({
+            "terrain": tkey, "objective": obj, "file": os.path.basename(path),
+            "dir": os.path.basename(base),
+            "status": r.get("status"), "score": r.get("score", 0),
+            "grade": r.get("grade", "D"), "axes": r.get("axes", {}),
+            "difficulty": terrain.get("difficulty", 1.0),
+        })
+    return cells
 
 
 def list_terrains():
@@ -196,6 +260,21 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json({"terrain": terrain.get("name", ""),
                                     "objective": terrain.get("objective", ""),
                                     "rows": rows})
+        if route == "/api/dashboard":
+            # Compare two model sets across the full terrain x objective matrix.
+            sets = qs.get("dir") or ["submissions_elite", "submissions_reference"]
+            out = {}
+            for d in sets:
+                cells = dashboard_matrix(d)
+                if cells is not None:
+                    out[os.path.basename(d.rstrip("/"))] = cells
+            if not out:
+                return self._send_json({"error": "no set directories found"}, 404)
+            return self._send_json({
+                "terrain_keys": list(TERRAIN_KEYS.keys()),
+                "objectives": list(OBJECTIVE_SLUGS.values()),
+                "sets": out,
+            })
         if route == "/api/reference":
             path = _safe_terrain_path((qs.get("file") or [None])[0])
             if not path:
