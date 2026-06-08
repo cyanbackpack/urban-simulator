@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>CityBench — 진행상황 보고서 2026-06-08</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+    font-size: 13px; line-height: 1.6; color: #1a1a2e;
+    max-width: 900px; margin: 0 auto; padding: 40px 36px;
+    background: #fff;
+  }
+  @media print {
+    body { padding: 20px 28px; }
+    .no-print { display: none; }
+    .page-break { page-break-before: always; }
+  }
+
+  /* ── header ── */
+  .cover { text-align: center; padding: 40px 0 32px; border-bottom: 3px solid #e8b400; margin-bottom: 32px; }
+  .cover h1 { font-size: 28px; font-weight: 700; color: #1a1a2e; margin: 0 0 6px; }
+  .cover .sub { font-size: 15px; color: #555; margin: 0; }
+  .cover .meta { font-size: 12px; color: #888; margin-top: 14px; }
+
+  /* ── sections ── */
+  h2 { font-size: 17px; font-weight: 700; color: #1a1a2e; margin: 32px 0 10px;
+       padding-bottom: 5px; border-bottom: 2px solid #e8b400; }
+  h3 { font-size: 14px; font-weight: 700; color: #333; margin: 18px 0 6px; }
+
+  /* ── checklist ── */
+  .check-list { list-style: none; padding: 0; margin: 0; }
+  .check-list li { display: flex; gap: 8px; padding: 4px 0; font-size: 13px; }
+  .check-list li::before { content: "✓"; color: #2d9e5f; font-weight: 700; flex-shrink: 0; }
+  .check-list li.todo::before { content: "○"; color: #bbb; }
+
+  /* ── cards ── */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 14px 0; }
+  .card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; }
+  .card .num { font-size: 26px; font-weight: 700; color: #e8b400; line-height: 1; }
+  .card .lbl { font-size: 11px; color: #666; margin-top: 4px; }
+
+  /* ── score table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
+  th { background: #f2f3f5; font-weight: 600; padding: 7px 10px; text-align: left;
+       border: 1px solid #ddd; }
+  td { padding: 6px 10px; border: 1px solid #ddd; vertical-align: middle; }
+  tr:nth-child(even) { background: #fafafa; }
+  .grade { display: inline-block; font-size: 11px; font-weight: 700; color: #fff;
+           border-radius: 4px; padding: 1px 7px; }
+  .grade.S { background: #c9a200; } .grade.A { background: #5fa33a; }
+  .grade.B { background: #3a90c0; } .grade.C { background: #c07820; }
+  .grade.D { background: #c05030; }
+
+  /* ── bar ── */
+  .bar-wrap { background: #e8e8e8; border-radius: 4px; height: 8px; overflow: hidden; margin-top: 3px; }
+  .bar-inner { height: 100%; background: linear-gradient(90deg, #3a90c0, #5fa33a); border-radius: 4px; }
+
+  /* ── axis panel ── */
+  .axis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 10px 0; }
+  .axis-cell { background: #f2f3f5; border-radius: 6px; padding: 10px; text-align: center; }
+  .axis-cell .name { font-size: 11px; color: #666; }
+  .axis-cell .max  { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+
+  /* ── architecture ── */
+  .arch-box { border: 1px solid #ddd; border-radius: 8px; padding: 14px 16px; background: #fafafa; margin: 10px 0; }
+  .arch-box code { font-size: 11px; background: #f0f0f0; border-radius: 3px; padding: 1px 4px; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; }
+  .flow .step { background: #e8b40022; border: 1px solid #e8b400; border-radius: 5px; padding: 3px 9px; font-weight: 600; }
+  .flow .arrow { color: #aaa; }
+
+  /* ── calibration ── */
+  .knob-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+  .knob { background: #f2f3f5; border-radius: 6px; padding: 10px 12px; border-left: 3px solid #e8b400; }
+  .knob .name { font-size: 12px; font-weight: 700; font-family: monospace; color: #1a1a2e; }
+  .knob .val { font-size: 14px; font-weight: 700; color: #e8b400; margin: 2px 0; }
+  .knob .desc { font-size: 11px; color: #666; }
+
+  /* ── web ui features ── */
+  .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 10px 0; }
+  .feature { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 7px; padding: 12px; }
+  .feature h4 { margin: 0 0 6px; font-size: 13px; color: #1a1a2e; display: flex; gap: 6px; align-items: center; }
+  .feature h4 .icon { font-size: 16px; }
+  .feature ul { margin: 0; padding-left: 16px; font-size: 12px; color: #555; }
+  .feature ul li { margin-bottom: 2px; }
+
+  /* ── file list ── */
+  .file-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 8px 0; }
+  .file-item { font-size: 12px; display: flex; gap: 6px; align-items: baseline; }
+  .file-item code { font-size: 11px; background: #f0f0f0; border-radius: 3px; padding: 1px 5px; white-space: nowrap; }
+  .file-item span { color: #666; }
+
+  /* ── roadmap ── */
+  .track { margin-bottom: 14px; }
+  .track-head { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
+  .track-head .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #fff; }
+  .tag.now  { background: #2d9e5f; }
+  .tag.next { background: #3a90c0; }
+  .tag.later{ background: #888; }
+  .track ul { margin: 0; padding-left: 18px; font-size: 12px; color: #555; }
+
+  /* ── formula ── */
+  .formula { background: #1a1a2e; color: #e6e9ee; border-radius: 8px; padding: 14px 18px;
+             font-family: monospace; font-size: 13px; line-height: 1.8; margin: 10px 0; }
+  .formula .c { color: #ffd95a; }
+  .formula .v { color: #8fd14f; }
+  .formula .n { color: #5ab0e0; }
+
+  /* ── print btn ── */
+  .print-btn { position: fixed; bottom: 24px; right: 24px; background: #e8b400; color: #1a1a2e;
+               border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 700;
+               cursor: pointer; box-shadow: 0 3px 10px #0003; }
+  .print-btn:hover { background: #c9a200; }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨 PDF 저장</button>
+
+<!-- ───────────────────────────────── COVER ───────────────────────────────── -->
+<div class="cover">
+  <h1>CityBench — 진행상황 보고서</h1>
+  <p class="sub">도시설계 벤치마크 플랫폼 프로토타입</p>
+  <p class="meta">2026-06-08 기준 &nbsp;·&nbsp; 브랜치 <code>claude/happy-cannon-kKMDy</code></p>
+</div>
+
+<!-- ───────────────────────────── 1. 한눈에 보기 ─────────────────────────── -->
+<h2>1. 현재 상태 요약</h2>
+
+<div class="cards">
+  <div class="card">
+    <div class="num">5</div>
+    <div class="lbl">지형 타입<br>(절차적 생성)</div>
+  </div>
+  <div class="card">
+    <div class="num">1,000</div>
+    <div class="lbl">점 5축 채점<br>(경제/교통/환경/주거/도시구조)</div>
+  </div>
+  <div class="card">
+    <div class="num">25</div>
+    <div class="lbl">밸런스 케이스<br>(5지형 × 5목적)</div>
+  </div>
+  <div class="card">
+    <div class="num">787.9</div>
+    <div class="lbl">캘리브레이션 후<br>평균 점수 (seed 3)</div>
+  </div>
+  <div class="card">
+    <div class="num">B+</div>
+    <div class="lbl">베이스라인 등급<br>분포 중심</div>
+  </div>
+  <div class="card">
+    <div class="num">0</div>
+    <div class="lbl">외부 의존성<br>(stdlib 서버)</div>
+  </div>
+</div>
+
+<p>지형 생성 → 벡터 제출 → 채점 → 검증 → 시각화 → 리더보드 → 밸런스 테스트까지
+전체 파이프라인이 닫혀 있고, 브라우저에서 폴리곤을 직접 그려 즉시 채점하는
+웹 UI가 추가되어 엔드-투-엔드로 동작합니다.</p>
+
+<!-- ───────────────────────────── 2. 아키텍처 ────────────────────────────── -->
+<h2>2. 시스템 아키텍처</h2>
+
+<div class="arch-box">
+  <div class="flow">
+    <span class="step">terrain_gen.py</span>
+    <span class="arrow">→</span>
+    <span class="step">terrain_*.json</span>
+    <span class="arrow">→</span>
+    <span class="step">make_reference.py</span>
+    <span class="arrow">→</span>
+    <span class="step">submission_*.json</span>
+    <span class="arrow">→</span>
+    <span class="step">score_v2.py</span>
+  </div>
+  <div class="flow">
+    <span class="step">webapp.py</span>
+    <span class="arrow">↕ REST</span>
+    <span class="step">web/app.js</span>
+    <span class="arrow">→</span>
+    <span class="step">Canvas 편집기</span>
+    <span class="arrow">→</span>
+    <span class="step">실시간 채점</span>
+  </div>
+  <div class="flow">
+    <span class="step">validate.py</span>
+    <span class="arrow">·</span>
+    <span class="step">render2.py</span>
+    <span class="arrow">·</span>
+    <span class="step">render_terrain.py</span>
+    <span class="arrow">·</span>
+    <span class="step">leaderboard.py</span>
+    <span class="arrow">·</span>
+    <span class="step">balance_test.py</span>
+  </div>
+</div>
+
+<p><strong>웹 서버</strong>는 Flask 없이 Python 표준 라이브러리 <code>ThreadingHTTPServer</code>만으로 구현했으며,
+채점 로직(<code>score_v2.run</code>)을 직접 임포트해 "화면에 보이는 도시 = 채점된 도시"를 보장합니다.</p>
+
+<!-- ────────────────────────── 3. 완료된 작업 ─────────────────────────────── -->
+<h2>3. 완료된 작업</h2>
+
+<h3>3-1. 지형·이벤트 생성</h3>
+<ul class="check-list">
+  <li>5종 지형 아키타입: lake_core / twin_coast / mountain_gate / great_delta / central_plain</li>
+  <li>fBm 고도 + 수계·경사·숲·습지·농지·기후 메타데이터 레이어 (v0.4)</li>
+  <li>15+ 정적 이벤트: 자원, 항만, 단층, 범람원, 태풍, 풍력, 대수층, 침하, 경관, 지열, 비옥토, 산사태 등</li>
+</ul>
+
+<h3>3-2. 채점 시스템</h3>
+<ul class="check-list">
+  <li>1,000점 5축 평가 + 목적적합 보너스 + 이벤트 점수 + 난이도 계수</li>
+  <li>하드 게이트 4종 (비건축지·예산·연결성·최소 인구/일자리)</li>
+  <li>등급 S/A/B/C/D (950 / 850 / 720 / 580 컷)</li>
+  <li><strong>캘리브레이션</strong>: S 비율 7/25 → 0/25 (베이스라인 B 중심 정착)</li>
+</ul>
+
+<h3>3-3. 검증·시각화·도구</h3>
+<ul class="check-list">
+  <li>validate.py: 게이트 + 위반 좌표 샘플 출력</li>
+  <li>render2.py: 마스터플랜 PNG (채점기 팔레트 동기화)</li>
+  <li>render_terrain.py: 위성지도 스타일 상세 지형 PNG</li>
+  <li>preview_terrains.py: 5지형 몽타주 PNG</li>
+  <li>make_reference.py: 지형별 결정론적 기준 제출물</li>
+  <li>leaderboard.py: 폴더 일괄 채점 + CSV + 누적막대 PNG</li>
+  <li>balance_test.py: 5지형 × 5목적 = 25조합 자동 스윕</li>
+</ul>
+
+<h3>3-4. 웹 UI (브라우저 편집기)</h3>
+<ul class="check-list">
+  <li>webapp.py: stdlib 서버, 9개 REST 엔드포인트, 경로 traversal 방어</li>
+  <li>지형 드롭다운 → Canvas 래스터 렌더링 (지형·이벤트·범례)</li>
+  <li>존 드로잉: 클릭 정점 추가, Enter/더블클릭/시작점 클릭으로 자동 닫기</li>
+  <li>교통·시설·역·허브·이벤트 배치 도구 (단축키 V/Z/T/F/S/H/E)</li>
+  <li>드래그: 존 정점·시설·이벤트 끌기, 드래그 중 좌표/면적 표시</li>
+  <li>Undo / Redo (JSON 스냅샷, Ctrl+Z / Ctrl+Y)</li>
+  <li>겹침 경고 배너 (폴리곤 커밋 시 자동 검사)</li>
+  <li>존 색상·라벨: CBD/주거/산업/공공/녹지 카테고리 팔레트 + 지도 위 칩</li>
+  <li>이벤트 인스펙터: 클릭 → 종류·효과 설명·이번 채점 gain/loss/net 표시</li>
+  <li>이벤트 추가/이동/삭제 + POST /api/score의 events 오버라이드로 즉시 채점</li>
+  <li>역·허브 인캔버스 배치/드래그/삭제 + 허브 수 → 교통축 점수 연동</li>
+  <li>스냅/그리드: 0.5/1/2.5 km 격자 표시 + 정점·점 배치를 격자에 스냅</li>
+  <li>리더보드 모달: 폴더 일괄 채점 → 점수순 표 + 현재 작업 행 + "불러오기"</li>
+  <li>5축 미니 막대, 등급 뱃지, 예산·이벤트·게이트 실패 사유 표시</li>
+</ul>
+
+<!-- ─────────────────────────── 4. 채점 공식 ──────────────────────────────── -->
+<h2>4. 채점 공식 (캘리브레이션 후)</h2>
+
+<div class="formula">
+  <span class="c">base_1000</span> = Σ axis_score(w_i × axis_i)  <span style="color:#666">— 5축 가중합</span><br>
+  <span class="c">eff_diff</span>  = 1 + (difficulty − 1) × <span class="v">DIFF_GAIN</span><br>
+  <span class="c">fit_bonus</span> = fit_score × <span class="v">FIT_BONUS_MAX</span><br>
+  <span class="c">ev_total</span>  = Σ(pos × <span class="v">EVENT_POS_GAIN</span> − neg)<br>
+  <span class="n">final</span>     = (base_1000 + fit_bonus + ev_total) × eff_diff
+</div>
+
+<div class="knob-grid">
+  <div class="knob">
+    <div class="name">DIFF_GAIN</div>
+    <div class="val">0.5</div>
+    <div class="desc">난이도 효과 압축. 0이면 난이도 무효, 1이면 원본 배율 그대로</div>
+  </div>
+  <div class="knob">
+    <div class="name">ECONOMY_STRETCH</div>
+    <div class="val">1.20</div>
+    <div class="desc">경제축 포화 방지. 목표 대비 20% 초과 달성이 만점 기준</div>
+  </div>
+  <div class="knob">
+    <div class="name">FIT_BONUS_MAX</div>
+    <div class="val">85</div>
+    <div class="desc">목적적합 보너스 상한. (이전: 100점 → 감쇠)</div>
+  </div>
+  <div class="knob">
+    <div class="name">EVENT_POS_GAIN</div>
+    <div class="val">0.75</div>
+    <div class="desc">기회 이벤트 보너스 감쇠. 재난 페널티는 그대로(1.0)</div>
+  </div>
+</div>
+
+<!-- ──────────────────────── 5. 밸런스 테스트 결과 ───────────────────────── -->
+<h2>5. 밸런스 테스트 결과 (seed 3)</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>구분</th><th>케이스</th><th>OK</th><th>FAIL</th>
+      <th>평균 점수</th><th>S</th><th>A</th><th>B</th><th>C</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>캘리브레이션 전</td><td>25</td><td>25</td><td>0</td>
+      <td>878.4</td>
+      <td><span class="grade S">7</span></td>
+      <td><span class="grade A">8</span></td>
+      <td><span class="grade B">8</span></td>
+      <td><span class="grade C">2</span></td>
+    </tr>
+    <tr style="background:#f0f8f0">
+      <td><strong>캘리브레이션 후</strong></td><td>25</td><td>25</td><td>0</td>
+      <td><strong>787.9</strong></td>
+      <td><span class="grade S">0</span></td>
+      <td><span class="grade A">5</span></td>
+      <td><span class="grade B">14</span></td>
+      <td><span class="grade C">6</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>베이스라인(기준 제출물)은 B 중심으로 정착됐습니다.
+S(950+)는 베이스라인 초과분에만 열려 있으며, 현재 최강 레퍼런스(great_delta / Logistics)가
+942.6으로 S컷 바로 아래 — "도달 가능하지만 공짜 아님"을 실증합니다.
+난이도별 평균 점수는 여전히 계단식으로 오릅니다(central_plain 0.95 → great_delta 1.30).</p>
+
+<div class="axis-grid">
+  <div class="axis-cell">
+    <div class="name">경제</div>
+    <div class="max">200점</div>
+    <div class="bar-wrap" style="margin-top:6px"><div class="bar-inner" style="width:100%"></div></div>
+  </div>
+  <div class="axis-cell">
+    <div class="name">교통</div>
+    <div class="max">200점</div>
+    <div class="bar-wrap" style="margin-top:6px"><div class="bar-inner" style="width:100%"></div></div>
+  </div>
+  <div class="axis-cell">
+    <div class="name">환경</div>
+    <div class="max">200점</div>
+    <div class="bar-wrap" style="margin-top:6px"><div class="bar-inner" style="width:100%"></div></div>
+  </div>
+  <div class="axis-cell">
+    <div class="name">주거</div>
+    <div class="max">200점</div>
+    <div class="bar-wrap" style="margin-top:6px"><div class="bar-inner" style="width:100%"></div></div>
+  </div>
+  <div class="axis-cell">
+    <div class="name">도시구조</div>
+    <div class="max">200점</div>
+    <div class="bar-wrap" style="margin-top:6px"><div class="bar-inner" style="width:100%"></div></div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── 6. 웹 UI 기능 ─────────────────────────────── -->
+<div class="page-break"></div>
+<h2>6. 웹 UI 편집기 기능 상세</h2>
+
+<div class="feature-grid">
+  <div class="feature">
+    <h4><span class="icon">▭</span> 존 편집</h4>
+    <ul>
+      <li>클릭으로 정점 추가, Enter/더블클릭/시작점 근처 클릭으로 자동 닫기</li>
+      <li>그리는 동안 면적(km²) 실시간 표시</li>
+      <li>CBD/상업·주거·산업물류·공공·녹지 팔레트</li>
+      <li>지도 위 색상 라벨 칩</li>
+    </ul>
+  </div>
+  <div class="feature">
+    <h4><span class="icon">↖</span> 선택 · 드래그</h4>
+    <ul>
+      <li>선택 모드(V)에서 정점·시설·이벤트 끌기</li>
+      <li>드래그 중 좌표(m) 및 면적(km²) 표시</li>
+      <li>Del 키로 선택 항목 삭제</li>
+    </ul>
+  </div>
+  <div class="feature">
+    <h4><span class="icon">↶</span> Undo / Redo</h4>
+    <ul>
+      <li>모든 편집(그리기·드래그·삭제)에 대해 동작</li>
+      <li>Ctrl+Z / Ctrl+Y, 툴바 버튼</li>
+      <li>JSON 스냅샷 스택</li>
+    </ul>
+  </div>
+  <div class="feature">
+    <h4><span class="icon">◎</span> 이벤트 편집</h4>
+    <ul>
+      <li>클릭 → 인스펙터: 종류·효과 설명·점수 반영 확인</li>
+      <li>이벤트 추가(반경 지정)·이동·삭제</li>
+      <li>채점 시 실제 scorer가 이벤트 변화를 반영</li>
+    </ul>
+  </div>
+  <div class="feature">
+    <h4><span class="icon">● ◉</span> 역 · 허브</h4>
+    <ul>
+      <li>인캔버스 배치/드래그/삭제</li>
+      <li>허브 개수 → 교통축 점수(t_hub) 반영</li>
+      <li>예산 계산에도 반영</li>
+    </ul>
+  </div>
+  <div class="feature">
+    <h4><span class="icon">⊞</span> 스냅 / 그리드</h4>
+    <ul>
+      <li>0.5 / 1 / 2.5 km 격자 표시</li>
+      <li>정점·점 배치 및 드래그를 격자에 스냅</li>
+      <li>격자 밀도 자동 조정 (줌 대응)</li>
+    </ul>
+  </div>
+  <div class="feature">
+    <h4><span class="icon">⚠</span> 겹침 경고</h4>
+    <ul>
+      <li>폴리곤 확정 시 기존 존과 교차 검사</li>
+      <li>겹칠 경우 배너 4초 표시</li>
+      <li>SAT 기반 폴리곤 교차 알고리즘</li>
+    </ul>
+  </div>
+  <div class="feature">
+    <h4><span class="icon">🏆</span> 리더보드</h4>
+    <ul>
+      <li>submissions 폴더 일괄 채점 → 점수순 표</li>
+      <li>현재 작업 행 강조 삽입</li>
+      <li>5축 미니 막대 비교, "불러오기"로 편집기 로드</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ─────────────────────────── 7. 주요 파일 ──────────────────────────────── -->
+<h2>7. 주요 파일 목록</h2>
+
+<div class="file-list">
+  <div class="file-item"><code>terrain_gen.py</code><span>지형·이벤트 절차적 생성</span></div>
+  <div class="file-item"><code>score_v2.py</code><span>채점기 본체 (5축 + 캘리브레이션)</span></div>
+  <div class="file-item"><code>geometry.py</code><span>벡터 폴리곤·폴리라인 래스터화 유틸</span></div>
+  <div class="file-item"><code>render2.py</code><span>마스터플랜 PNG 렌더러</span></div>
+  <div class="file-item"><code>render_terrain.py</code><span>상세 지형 전용 렌더러</span></div>
+  <div class="file-item"><code>preview_terrains.py</code><span>5지형 미리보기 몽타주</span></div>
+  <div class="file-item"><code>validate.py</code><span>제출물 하드 게이트 검증기</span></div>
+  <div class="file-item"><code>make_reference.py</code><span>지형별 기준 제출물 생성</span></div>
+  <div class="file-item"><code>leaderboard.py</code><span>폴더 일괄 채점 + CSV/PNG</span></div>
+  <div class="file-item"><code>balance_test.py</code><span>25조합 밸런스 스윕</span></div>
+  <div class="file-item"><code>make_fitted.py</code><span>Lake Core 데모 제출물</span></div>
+  <div class="file-item"><code>webapp.py</code><span>웹 서버 (stdlib, 9 엔드포인트)</span></div>
+  <div class="file-item"><code>web/index.html</code><span>편집기 UI 마크업</span></div>
+  <div class="file-item"><code>web/app.js</code><span>Canvas 편집기 전체 로직</span></div>
+  <div class="file-item"><code>web/style.css</code><span>다크 테마 스타일</span></div>
+  <div class="file-item"><code>BENCHMARK_SPEC_v04.md</code><span>v0.4 벤치마크 스펙 문서</span></div>
+</div>
+
+<!-- ──────────────────────────── 8. 로드맵 ───────────────────────────────── -->
+<h2>8. 다음 단계 로드맵</h2>
+
+<div class="track">
+  <div class="track-head">
+    <span class="tag next">Track A — 캘리브레이션 마무리</span>
+    <span style="font-size:12px;color:#666">저비용, 직접 후속</span>
+  </div>
+  <ul>
+    <li><strong>A1. 멀티 시드 검증</strong>: 여러 seed(1, 2, 7, 11)로 balance_test.py 실행 → 등급 분포 안정성 확인</li>
+    <li><strong>A2. S 도달 가능성 입증</strong>: 손튜닝 제출물로 950+ 달성 확인 (현재 최강 942.6, S컷 바로 아래)</li>
+  </ul>
+</div>
+
+<div class="track">
+  <div class="track-head">
+    <span class="tag next">Track B — 이벤트 시너지</span>
+  </div>
+  <ul>
+    <li>조합 보너스: 광맥 + freight_rail + 항만 동시 보유 시 추가 점수</li>
+    <li>이벤트 간 상호작용, 시드별 이벤트 다양화</li>
+    <li>레퍼런스 고도화: 목적별 실제 A/S급 모범답안 세트</li>
+  </ul>
+</div>
+
+<div class="track">
+  <div class="track-head">
+    <span class="tag next">Track C — 사용성/생태계</span>
+  </div>
+  <ul>
+    <li>참가자 가이드: 폴리곤 작성법, 게이트 회피, validate.py 워크스루</li>
+    <li>README 5분 서사형 가이드 (명령 → 결과 해석 전 과정)</li>
+  </ul>
+</div>
+
+<div class="track">
+  <div class="track-head">
+    <span class="tag later">Track D — 웹 UI 폴리시 (부분 완료)</span>
+  </div>
+  <ul>
+    <li>다중 지형 리더보드 페이지 (현재: 단일 지형·폴더)</li>
+    <li>누적막대 등 더 풍부한 비교 차트</li>
+    <li>실제 GIS/OSM/DEM 데이터 파이프라인 (외부 네트워크 필요)</li>
+  </ul>
+</div>
+
+<!-- ──────────────────────────── 9. 실행 가이드 ──────────────────────────── -->
+<h2>9. 빠른 실행 가이드</h2>
+
+<div class="arch-box">
+  <h3 style="margin-top:0">CLI 파이프라인</h3>
+  <pre style="font-size:12px;line-height:1.8;margin:0;color:#333">
+# 1. 지형 생성 (5종)
+python terrain_gen.py lake_core "Financial Capital" 3 terrain_lake_core.json
+
+# 2. 데모 제출물 생성 및 채점
+python make_fitted.py
+python score_v2.py terrain_lake_core.json submission_lakecore3.json
+
+# 3. 검증 및 시각화
+python validate.py terrain_lake_core.json submission_lakecore3.json
+python render2.py terrain_lake_core.json submission_lakecore3.json plan_v04.png
+
+# 4. 리더보드 + 밸런스 테스트
+python leaderboard.py terrain_lake_core.json submissions_demo leaderboard_lakecore
+python balance_test.py balance_report.csv 3
+  </pre>
+</div>
+
+<div class="arch-box">
+  <h3 style="margin-top:0">웹 UI</h3>
+  <pre style="font-size:12px;line-height:1.8;margin:0;color:#333">
+python webapp.py 8000
+# 브라우저에서 http://localhost:8000 접속
+# 지형 선택 → 도구로 존/교통/이벤트 편집 → 채점 버튼
+  </pre>
+</div>
+
+<!-- ────────────────────────── footer ──────────────────────────────────────── -->
+<hr style="margin:40px 0 16px;border:none;border-top:1px solid #ddd">
+<p style="font-size:11px;color:#aaa;text-align:center">
+  CityBench v0.4 — branch <code>claude/happy-cannon-kKMDy</code> — 2026-06-08
+</p>
+
+</body>
+</html>
