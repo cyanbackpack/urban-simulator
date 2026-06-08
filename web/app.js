@@ -37,6 +37,8 @@ const TRANSIT_KR = {
   subway: "지하철", brt: "BRT", rail: "철도", freight_rail: "화물철도",
   highway: "고속도로", arterial: "간선도로",
 };
+// Station kinds (a subset of transit modes that have platforms).
+const STATION_KR = { subway: "지하철역", rail: "철도역", brt: "BRT 정류장" };
 const FAC = {
   airport: ["A", "#3a7bd5"], port: ["P", "#2a6f97"],
   freight_terminal: ["F", "#9c6b3f"], power: ["E", "#e0a020"],
@@ -84,7 +86,8 @@ const state = {
   submission: EMPTY_SUB(),
   events: [],                 // editable working copy of terrain events
   mode: "select",
-  drawUse: "CBD", drawTransit: "subway", drawFacility: "airport", drawEvent: "mineral_deposit",
+  drawUse: "CBD", drawTransit: "subway", drawFacility: "airport",
+  drawStation: "subway", drawEvent: "mineral_deposit",
   draft: null,                // in-progress {kind:'zone'|'transit', pts:[[m,m]...]}
   sel: null,                  // {kind, index}
   drag: null,                 // {kind, index, vi?}
@@ -350,17 +353,20 @@ function drawFacilities(g) {
   });
 }
 function drawStations(g) {
-  ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#222428"; ctx.lineWidth = 1;
-  (state.submission.stations || []).forEach((s) => {
-    ctx.beginPath(); ctx.arc(g.mx(s.x), g.my(s.y), 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  (state.submission.stations || []).forEach((s, i) => {
+    const sel = state.sel && state.sel.kind === "station" && state.sel.index === i;
+    ctx.beginPath(); ctx.arc(g.mx(s.x), g.my(s.y), sel ? 5 : 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff"; ctx.fill();
+    ctx.lineWidth = sel ? 2.5 : 1; ctx.strokeStyle = sel ? "#ffd95a" : "#222428"; ctx.stroke();
   });
 }
 function drawHubs(g) {
-  (state.submission.hubs || []).forEach((hb) => {
+  (state.submission.hubs || []).forEach((hb, i) => {
+    const sel = state.sel && state.sel.kind === "hub" && state.sel.index === i;
     const px = g.mx(hb.x), py = g.my(hb.y);
-    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(px, py, sel ? 9 : 7, 0, Math.PI * 2);
     ctx.fillStyle = "#1f2430"; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = "#ffffff"; ctx.stroke();
+    ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = sel ? "#ffd95a" : "#ffffff"; ctx.stroke();
   });
 }
 function drawEvents(g) {
@@ -434,7 +440,7 @@ function setMode(mode) {
   state.mode = mode;
   state.draft = null;
   document.querySelectorAll(".tool").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
-  ["zone", "transit", "facility", "event"].forEach((m) =>
+  ["zone", "transit", "facility", "station", "event"].forEach((m) =>
     $("palette-" + m).classList.toggle("hidden", m !== mode));
   canvas.style.cursor = mode === "select" ? "default" : "crosshair";
   draw();
@@ -472,6 +478,11 @@ canvas.addEventListener("mousedown", (e) => {
     // 3) facilities (draggable)
     const fi = hitPoint(px, py, state.submission.facilities);
     if (fi >= 0) { state.sel = { kind: "facility", index: fi }; hideInspector(); pushHistory(); state.drag = { kind: "facility", index: fi }; refreshButtons(); draw(); return; }
+    // 3b) hubs then stations (draggable)
+    const hi = hitPoint(px, py, state.submission.hubs, 10);
+    if (hi >= 0) { state.sel = { kind: "hub", index: hi }; hideInspector(); pushHistory(); state.drag = { kind: "hub", index: hi }; refreshButtons(); draw(); return; }
+    const si = hitPoint(px, py, state.submission.stations, 8);
+    if (si >= 0) { state.sel = { kind: "station", index: si }; hideInspector(); pushHistory(); state.drag = { kind: "station", index: si }; refreshButtons(); draw(); return; }
     // 4) select a zone
     const zi = hitZone(m);
     state.sel = zi >= 0 ? { kind: "zone", index: zi } : null;
@@ -495,7 +506,20 @@ canvas.addEventListener("mousedown", (e) => {
   if (state.mode === "facility") {
     pushHistory();
     state.submission.facilities.push({ type: state.drawFacility, x: round(m[0]), y: round(m[1]) });
-    draw(); return;
+    state.sel = { kind: "facility", index: state.submission.facilities.length - 1 };
+    refreshButtons(); draw(); return;
+  }
+  if (state.mode === "station") {
+    pushHistory();
+    state.submission.stations.push({ type: state.drawStation, x: round(m[0]), y: round(m[1]) });
+    state.sel = { kind: "station", index: state.submission.stations.length - 1 };
+    refreshButtons(); draw(); return;
+  }
+  if (state.mode === "hub") {
+    pushHistory();
+    state.submission.hubs.push({ x: round(m[0]), y: round(m[1]) });
+    state.sel = { kind: "hub", index: state.submission.hubs.length - 1 };
+    refreshButtons(); draw(); return;
   }
   if (state.mode === "event") {
     pushHistory();
@@ -521,6 +545,10 @@ canvas.addEventListener("mousemove", (e) => {
       const ev = state.events[state.drag.index]; ev.x = round(m[0]); ev.y = round(m[1]);
     } else if (state.drag.kind === "facility") {
       const f = state.submission.facilities[state.drag.index]; f.x = round(m[0]); f.y = round(m[1]);
+    } else if (state.drag.kind === "station") {
+      const s = state.submission.stations[state.drag.index]; s.x = round(m[0]); s.y = round(m[1]);
+    } else if (state.drag.kind === "hub") {
+      const hb = state.submission.hubs[state.drag.index]; hb.x = round(m[0]); hb.y = round(m[1]);
     }
     draw();
   } else if (state.draft) {
@@ -581,6 +609,8 @@ function deleteSelected() {
   if (kind === "zone") state.submission.zones.splice(index, 1);
   else if (kind === "transit") state.submission.transit.splice(index, 1);
   else if (kind === "facility") state.submission.facilities.splice(index, 1);
+  else if (kind === "station") state.submission.stations.splice(index, 1);
+  else if (kind === "hub") state.submission.hubs.splice(index, 1);
   else if (kind === "event") state.events.splice(index, 1);
   state.sel = null; hideInspector(); refreshButtons(); draw();
 }
@@ -592,7 +622,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { if (state.draft) commitDraft(); return; }
   if (e.key === "Escape") { state.draft = null; state.sel = null; hideInspector(); draw(); return; }
   if (e.key === "Delete" || e.key === "Backspace") { deleteSelected(); return; }
-  const map = { v: "select", z: "zone", t: "transit", f: "facility", e: "event" };
+  const map = { v: "select", z: "zone", t: "transit", f: "facility", s: "station", h: "hub", e: "event" };
   if (map[e.key.toLowerCase()]) setMode(map[e.key.toLowerCase()]);
 });
 
@@ -742,11 +772,13 @@ document.querySelectorAll(".tool").forEach((b) => b.addEventListener("click", ()
 $("zone-use").addEventListener("change", (e) => { state.drawUse = e.target.value; });
 $("transit-type").addEventListener("change", (e) => { state.drawTransit = e.target.value; });
 $("facility-type").addEventListener("change", (e) => { state.drawFacility = e.target.value; });
+$("station-type").addEventListener("change", (e) => { state.drawStation = e.target.value; });
 $("event-type").addEventListener("change", (e) => { state.drawEvent = e.target.value; });
 
 fillZonePalette();
 fillSimple("transit-type", ROAD, TRANSIT_KR, state.drawTransit);
 fillSimple("facility-type", FAC, FAC_KR, state.drawFacility);
+fillSimple("station-type", STATION_KR, STATION_KR, state.drawStation);
 fillEventPalette();
 setMode("select");
 loadTerrainList().catch((e) => setStatus("초기화 실패: " + e.message, "err"));

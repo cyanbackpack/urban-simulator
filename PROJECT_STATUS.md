@@ -73,8 +73,9 @@ Balance sweep after calibration, seed 3:
   zones, transit, facilities; undo/redo; live area/coordinate readout; overlap
   warning; grouped zone palette/labels; and an editable event layer that scores
   through the real scorer via the `events` override on `POST /api/score`.
-  Remaining polish: snapping/grid, in-canvas station/hub editing, leaderboard
-  and side-by-side comparison views.
+  Stations and hubs are editable in-canvas too (place/drag/delete; hub count
+  feeds the transport axis). Remaining polish: snapping/grid, leaderboard and
+  side-by-side comparison views.
 
 ## Terrain Fidelity Note
 
