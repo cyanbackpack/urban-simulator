@@ -1,0 +1,252 @@
+{
+ "submissions_elite/elite_central_plain_eco_metropolis.json": {
+  "grade": "A",
+  "score": 896.1,
+  "status": "OK"
+ },
+ "submissions_elite/elite_central_plain_financial_capital.json": {
+  "grade": "A",
+  "score": 856.5,
+  "status": "OK"
+ },
+ "submissions_elite/elite_central_plain_innovation_city.json": {
+  "grade": "A",
+  "score": 861.7,
+  "status": "OK"
+ },
+ "submissions_elite/elite_central_plain_logistics_hub.json": {
+  "grade": "A",
+  "score": 897.0,
+  "status": "OK"
+ },
+ "submissions_elite/elite_central_plain_tourism_capital.json": {
+  "grade": "A",
+  "score": 855.2,
+  "status": "OK"
+ },
+ "submissions_elite/elite_great_delta_eco_metropolis.json": {
+  "grade": "S",
+  "score": 991.5,
+  "status": "OK"
+ },
+ "submissions_elite/elite_great_delta_financial_capital.json": {
+  "grade": "S",
+  "score": 958.1,
+  "status": "OK"
+ },
+ "submissions_elite/elite_great_delta_innovation_city.json": {
+  "grade": "S",
+  "score": 995.1,
+  "status": "OK"
+ },
+ "submissions_elite/elite_great_delta_logistics_hub.json": {
+  "grade": "S",
+  "score": 1014.4,
+  "status": "OK"
+ },
+ "submissions_elite/elite_great_delta_tourism_capital.json": {
+  "grade": "S",
+  "score": 972.9,
+  "status": "OK"
+ },
+ "submissions_elite/elite_lake_core_eco_metropolis.json": {
+  "grade": "A",
+  "score": 946.2,
+  "status": "OK"
+ },
+ "submissions_elite/elite_lake_core_financial_capital.json": {
+  "grade": "A",
+  "score": 907.6,
+  "status": "OK"
+ },
+ "submissions_elite/elite_lake_core_innovation_city.json": {
+  "grade": "A",
+  "score": 940.6,
+  "status": "OK"
+ },
+ "submissions_elite/elite_lake_core_logistics_hub.json": {
+  "grade": "A",
+  "score": 949.7,
+  "status": "OK"
+ },
+ "submissions_elite/elite_lake_core_tourism_capital.json": {
+  "grade": "A",
+  "score": 906.0,
+  "status": "OK"
+ },
+ "submissions_elite/elite_mountain_gate_eco_metropolis.json": {
+  "grade": "S",
+  "score": 1019.9,
+  "status": "OK"
+ },
+ "submissions_elite/elite_mountain_gate_financial_capital.json": {
+  "grade": "S",
+  "score": 1006.9,
+  "status": "OK"
+ },
+ "submissions_elite/elite_mountain_gate_innovation_city.json": {
+  "grade": "S",
+  "score": 1015.3,
+  "status": "OK"
+ },
+ "submissions_elite/elite_mountain_gate_logistics_hub.json": {
+  "grade": "S",
+  "score": 1054.7,
+  "status": "OK"
+ },
+ "submissions_elite/elite_mountain_gate_tourism_capital.json": {
+  "grade": "S",
+  "score": 1005.5,
+  "status": "OK"
+ },
+ "submissions_elite/elite_twin_coast_eco_metropolis.json": {
+  "grade": "A",
+  "score": 900.7,
+  "status": "OK"
+ },
+ "submissions_elite/elite_twin_coast_financial_capital.json": {
+  "grade": "A",
+  "score": 898.3,
+  "status": "OK"
+ },
+ "submissions_elite/elite_twin_coast_innovation_city.json": {
+  "grade": "A",
+  "score": 905.2,
+  "status": "OK"
+ },
+ "submissions_elite/elite_twin_coast_logistics_hub.json": {
+  "grade": "S",
+  "score": 951.3,
+  "status": "OK"
+ },
+ "submissions_elite/elite_twin_coast_tourism_capital.json": {
+  "grade": "A",
+  "score": 924.7,
+  "status": "OK"
+ },
+ "submissions_reference/reference_central_plain_eco_metropolis.json": {
+  "grade": "B",
+  "score": 765.4,
+  "status": "OK"
+ },
+ "submissions_reference/reference_central_plain_financial_capital.json": {
+  "grade": "C",
+  "score": 697.6,
+  "status": "OK"
+ },
+ "submissions_reference/reference_central_plain_innovation_city.json": {
+  "grade": "C",
+  "score": 710.2,
+  "status": "OK"
+ },
+ "submissions_reference/reference_central_plain_logistics_hub.json": {
+  "grade": "B",
+  "score": 748.1,
+  "status": "OK"
+ },
+ "submissions_reference/reference_central_plain_tourism_capital.json": {
+  "grade": "C",
+  "score": 698.6,
+  "status": "OK"
+ },
+ "submissions_reference/reference_great_delta_eco_metropolis.json": {
+  "grade": "A",
+  "score": 898.2,
+  "status": "OK"
+ },
+ "submissions_reference/reference_great_delta_financial_capital.json": {
+  "grade": "B",
+  "score": 816.3,
+  "status": "OK"
+ },
+ "submissions_reference/reference_great_delta_innovation_city.json": {
+  "grade": "A",
+  "score": 873.4,
+  "status": "OK"
+ },
+ "submissions_reference/reference_great_delta_logistics_hub.json": {
+  "grade": "A",
+  "score": 903.8,
+  "status": "OK"
+ },
+ "submissions_reference/reference_great_delta_tourism_capital.json": {
+  "grade": "B",
+  "score": 844.5,
+  "status": "OK"
+ },
+ "submissions_reference/reference_lake_core_eco_metropolis.json": {
+  "grade": "B",
+  "score": 808.0,
+  "status": "OK"
+ },
+ "submissions_reference/reference_lake_core_financial_capital.json": {
+  "grade": "B",
+  "score": 770.8,
+  "status": "OK"
+ },
+ "submissions_reference/reference_lake_core_innovation_city.json": {
+  "grade": "B",
+  "score": 783.1,
+  "status": "OK"
+ },
+ "submissions_reference/reference_lake_core_logistics_hub.json": {
+  "grade": "B",
+  "score": 762.4,
+  "status": "OK"
+ },
+ "submissions_reference/reference_lake_core_tourism_capital.json": {
+  "grade": "B",
+  "score": 745.2,
+  "status": "OK"
+ },
+ "submissions_reference/reference_mountain_gate_eco_metropolis.json": {
+  "grade": "B",
+  "score": 846.0,
+  "status": "OK"
+ },
+ "submissions_reference/reference_mountain_gate_financial_capital.json": {
+  "grade": "B",
+  "score": 806.4,
+  "status": "OK"
+ },
+ "submissions_reference/reference_mountain_gate_innovation_city.json": {
+  "grade": "B",
+  "score": 844.0,
+  "status": "OK"
+ },
+ "submissions_reference/reference_mountain_gate_logistics_hub.json": {
+  "grade": "B",
+  "score": 848.9,
+  "status": "OK"
+ },
+ "submissions_reference/reference_mountain_gate_tourism_capital.json": {
+  "grade": "B",
+  "score": 824.5,
+  "status": "OK"
+ },
+ "submissions_reference/reference_twin_coast_eco_metropolis.json": {
+  "grade": "B",
+  "score": 813.2,
+  "status": "OK"
+ },
+ "submissions_reference/reference_twin_coast_financial_capital.json": {
+  "grade": "B",
+  "score": 770.3,
+  "status": "OK"
+ },
+ "submissions_reference/reference_twin_coast_innovation_city.json": {
+  "grade": "B",
+  "score": 794.5,
+  "status": "OK"
+ },
+ "submissions_reference/reference_twin_coast_logistics_hub.json": {
+  "grade": "A",
+  "score": 871.5,
+  "status": "OK"
+ },
+ "submissions_reference/reference_twin_coast_tourism_capital.json": {
+  "grade": "B",
+  "score": 809.1,
+  "status": "OK"
+ }
+}

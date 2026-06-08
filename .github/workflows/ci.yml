@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy
+
+      - name: Sanity-compile core modules
+        run: |
+          python -m py_compile geometry.py terrain_gen.py score_v2.py \
+            make_reference.py make_elite.py make_elite_set.py \
+            balance_multiseed.py schema.py webapp.py
+
+      - name: Regression test suite
+        run: python run_tests.py
+
+      - name: Baseline calibration envelope
+        run: python balance_multiseed.py --check
+
+      - name: Elite set A-floor + S proof
+        run: python make_elite_set.py --check --no-write
