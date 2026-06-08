@@ -92,6 +92,7 @@ const state = {
   sel: null,                  // {kind, index}
   drag: null,                 // {kind, index, vi?}
   history: [], redo: [],
+  snap: false, gridStep: 500,   // grid spacing in meters
   lastResult: null,
   g: null,                    // current geometry (set in draw)
   mouse: null,                // last mouse [m,m]
@@ -263,6 +264,7 @@ function draw() {
   canvas.height = g.h * g.cpx;
 
   drawTerrain(g);
+  drawGrid(g);
   drawZones(g);
   drawTransit(g);
   drawFacilities(g);
@@ -292,6 +294,17 @@ function drawTerrain(g) {
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = true;
+}
+function drawGrid(g) {
+  if (!state.snap) return;
+  let sp = state.gridStep / g.cell * g.cpx;          // px per grid step
+  const k = Math.max(1, Math.ceil(12 / sp));         // keep lines >=~12px apart
+  sp *= k;                                            // still a multiple of the snap step
+  ctx.lineWidth = 1; ctx.strokeStyle = "#1f242b55";
+  ctx.beginPath();
+  for (let x = 0; x <= canvas.width + 0.5; x += sp) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+  for (let y = 0; y <= canvas.height + 0.5; y += sp) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
+  ctx.stroke();
 }
 function tracePoly(g, poly) {
   ctx.beginPath();
@@ -399,7 +412,7 @@ function drawDraft(g) {
   const col = isZone ? (ZONE[state.drawUse] || "#fff") : (ROAD[state.drawTransit] || ["#fff"])[0];
   ctx.beginPath();
   pts.forEach(([x, y], i) => { const px = g.mx(x), py = g.my(y); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
-  if (state.mouse) ctx.lineTo(g.mx(state.mouse[0]), g.my(state.mouse[1]));
+  if (state.mouse) { const mm = snap(state.mouse); ctx.lineTo(g.mx(mm[0]), g.my(mm[1])); }
   ctx.setLineDash([5, 4]); ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke();
   ctx.setLineDash([]);
   pts.forEach(([x, y], i) => {
@@ -495,37 +508,41 @@ canvas.addEventListener("mousedown", (e) => {
     const pts = state.draft.pts;
     if (pts.length >= 3 && Math.hypot(state.g.mx(pts[0][0]) - px, state.g.my(pts[0][1]) - py) <= 8) {
       commitDraft();                 // auto-close: clicked near first vertex
-    } else { pts.push(m); draw(); }
+    } else { pts.push(snap(m)); draw(); }
     return;
   }
   if (state.mode === "transit") {
     if (!state.draft) state.draft = { kind: "transit", pts: [] };
-    state.draft.pts.push(m); draw();
+    state.draft.pts.push(snap(m)); draw();
     return;
   }
   if (state.mode === "facility") {
     pushHistory();
-    state.submission.facilities.push({ type: state.drawFacility, x: round(m[0]), y: round(m[1]) });
+    const p = snap(m);
+    state.submission.facilities.push({ type: state.drawFacility, x: p[0], y: p[1] });
     state.sel = { kind: "facility", index: state.submission.facilities.length - 1 };
     refreshButtons(); draw(); return;
   }
   if (state.mode === "station") {
     pushHistory();
-    state.submission.stations.push({ type: state.drawStation, x: round(m[0]), y: round(m[1]) });
+    const p = snap(m);
+    state.submission.stations.push({ type: state.drawStation, x: p[0], y: p[1] });
     state.sel = { kind: "station", index: state.submission.stations.length - 1 };
     refreshButtons(); draw(); return;
   }
   if (state.mode === "hub") {
     pushHistory();
-    state.submission.hubs.push({ x: round(m[0]), y: round(m[1]) });
+    const p = snap(m);
+    state.submission.hubs.push({ x: p[0], y: p[1] });
     state.sel = { kind: "hub", index: state.submission.hubs.length - 1 };
     refreshButtons(); draw(); return;
   }
   if (state.mode === "event") {
     pushHistory();
     const info = EVENT_INFO[state.drawEvent];
+    const p = snap(m);
     state.events.push({
-      type: state.drawEvent, x: round(m[0]), y: round(m[1]),
+      type: state.drawEvent, x: p[0], y: p[1],
       radius: Math.max(500, parseInt($("event-radius").value, 10) || 4000),
       class: info ? info[1] : "mixed", name: info ? info[2] : state.drawEvent,
     });
@@ -539,16 +556,17 @@ canvas.addEventListener("mousemove", (e) => {
   const m = evtMeters(e);
   state.mouse = m;
   if (state.drag) {
+    const p = snap(m);
     if (state.drag.kind === "zonevtx") {
-      state.submission.zones[state.drag.index].polygon[state.drag.vi] = [round(m[0]), round(m[1])];
+      state.submission.zones[state.drag.index].polygon[state.drag.vi] = p;
     } else if (state.drag.kind === "event") {
-      const ev = state.events[state.drag.index]; ev.x = round(m[0]); ev.y = round(m[1]);
+      const ev = state.events[state.drag.index]; ev.x = p[0]; ev.y = p[1];
     } else if (state.drag.kind === "facility") {
-      const f = state.submission.facilities[state.drag.index]; f.x = round(m[0]); f.y = round(m[1]);
+      const f = state.submission.facilities[state.drag.index]; f.x = p[0]; f.y = p[1];
     } else if (state.drag.kind === "station") {
-      const s = state.submission.stations[state.drag.index]; s.x = round(m[0]); s.y = round(m[1]);
+      const s = state.submission.stations[state.drag.index]; s.x = p[0]; s.y = p[1];
     } else if (state.drag.kind === "hub") {
-      const hb = state.submission.hubs[state.drag.index]; hb.x = round(m[0]); hb.y = round(m[1]);
+      const hb = state.submission.hubs[state.drag.index]; hb.x = p[0]; hb.y = p[1];
     }
     draw();
   } else if (state.draft) {
@@ -564,7 +582,8 @@ canvas.addEventListener("mouseleave", () => { state.mouse = null; if (!state.dra
 function updateReadout(m) {
   const out = $("readout");
   if (!m) { out.textContent = state.terrain ? `${state.g.w}×${state.g.h} 셀 · ${state.g.cell}m/셀` : ""; return; }
-  let txt = `x ${round(m[0])} · y ${round(m[1])} m`;
+  const p = snap(m);
+  let txt = `x ${p[0]} · y ${p[1]} m${state.snap ? " ⊞" : ""}`;
   if (state.draft && state.draft.kind === "zone" && state.draft.pts.length >= 2) {
     txt += ` · 면적 ${polyAreaKm2([...state.draft.pts, m]).toFixed(2)} km²`;
   } else if (state.draft && state.draft.kind === "transit" && state.draft.pts.length >= 1) {
@@ -716,6 +735,67 @@ function renderPanel(r) {
 }
 
 /* ===========================================================================
+ * Leaderboard · comparison
+ * ======================================================================== */
+const LB_DIR = "submissions_demo";
+function axisMiniBars(axes) {
+  return AXES.map((a) => {
+    const v = axes[a] || 0;
+    return `<span class="mini" title="${AXIS_KR[a]} ${v.toFixed(0)}"><span style="height:${Math.min(100, v / 2)}%"></span></span>`;
+  }).join("");
+}
+function lbRow(rank, r, current) {
+  const cls = current ? "lbrow current" : "lbrow" + (r.status !== "OK" ? " failed" : "");
+  const score = r.status === "OK" ? r.score : "—";
+  const grade = r.status === "OK" ? `<span class="grade ${r.grade}">${r.grade}</span>` : `<span class="gx">FAIL</span>`;
+  const name = current ? "▶ 현재 작업" : esc(r.name || r.file);
+  const action = current ? "" : `<button class="lb-load" data-file="${esc(r.file)}">불러오기</button>`;
+  return `<tr class="${cls}">
+    <td class="rk">${rank}</td><td class="nm">${name}</td>
+    <td class="sc">${score}</td><td>${grade}</td>
+    <td class="bars">${r.axes ? axisMiniBars(r.axes) : ""}</td>
+    <td class="ac">${action}</td></tr>`;
+}
+async function openLeaderboard() {
+  if (!state.terrainFile) return;
+  const modal = $("lb-modal"), body = $("lb-body");
+  modal.classList.remove("hidden");
+  body.innerHTML = '<div class="placeholder">채점 중…</div>';
+  const data = await (await fetch(`/api/leaderboard?file=${encodeURIComponent(state.terrainFile)}&dir=${LB_DIR}`)).json();
+  if (data.error) { body.innerHTML = `<div class="placeholder">${data.error}</div>`; return; }
+  $("lb-sub").textContent = `${data.terrain} · ${data.objective} · ${LB_DIR}/`;
+
+  // Merge in the current working submission (if scored) and rank everything.
+  const rows = data.rows.map((r) => ({ r, current: false }));
+  if (state.lastResult && state.lastResult.status) {
+    rows.push({ current: true, r: {
+      file: "__current__", name: "현재 작업",
+      status: state.lastResult.status, score: state.lastResult.score || 0,
+      grade: state.lastResult.grade, axes: state.lastResult.axes || {},
+    }});
+  }
+  rows.sort((a, b) => (a.r.status !== "OK") - (b.r.status !== "OK") || b.r.score - a.r.score);
+
+  const head = `<table class="lb"><thead><tr>
+    <th>#</th><th>이름</th><th>점수</th><th>등급</th><th>축(경·교·환·주·도)</th><th></th>
+    </tr></thead><tbody>`;
+  body.innerHTML = head + rows.map((x, i) => lbRow(i + 1, x.r, x.current)).join("") + "</tbody></table>";
+  body.querySelectorAll(".lb-load").forEach((b) =>
+    b.addEventListener("click", () => loadFromLeaderboard(b.dataset.file)));
+}
+async function loadFromLeaderboard(file) {
+  const sub = await (await fetch(`/api/submission?dir=${LB_DIR}&file=${encodeURIComponent(file)}`)).json();
+  if (sub.error) return setStatus(sub.error, "err");
+  state.submission = Object.assign(EMPTY_SUB(), sub);
+  delete state.submission.metadata;
+  if (Array.isArray(sub.events)) state.events = sub.events;
+  state.history = []; state.redo = []; state.sel = null; refreshButtons();
+  $("lb-modal").classList.add("hidden");
+  draw(); scoreNow();
+  setStatus(`'${file}' 불러옴`, "ok");
+}
+
+/* ===========================================================================
  * Utilities
  * ======================================================================== */
 function hexRgb(hex) { const h = hex.replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
@@ -727,6 +807,11 @@ function roundRect(x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
 function round(n) { return Math.round(n); }
+// Snap a meter point to the grid when snapping is on, else round to integer.
+function snap(m) {
+  if (state.snap) { const s = state.gridStep; return [Math.round(m[0] / s) * s, Math.round(m[1] / s) * s]; }
+  return [round(m[0]), round(m[1])];
+}
 function fmt(n) { return (n || 0).toLocaleString(); }
 function esc(s) { return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 
@@ -774,6 +859,11 @@ $("transit-type").addEventListener("change", (e) => { state.drawTransit = e.targ
 $("facility-type").addEventListener("change", (e) => { state.drawFacility = e.target.value; });
 $("station-type").addEventListener("change", (e) => { state.drawStation = e.target.value; });
 $("event-type").addEventListener("change", (e) => { state.drawEvent = e.target.value; });
+$("snap-on").addEventListener("change", (e) => { state.snap = e.target.checked; draw(); });
+$("snap-step").addEventListener("change", (e) => { state.gridStep = parseInt(e.target.value, 10); if (state.snap) draw(); });
+$("btn-leaderboard").addEventListener("click", openLeaderboard);
+$("lb-close").addEventListener("click", () => $("lb-modal").classList.add("hidden"));
+$("lb-modal").addEventListener("click", (e) => { if (e.target.id === "lb-modal") $("lb-modal").classList.add("hidden"); });
 
 fillZonePalette();
 fillSimple("transit-type", ROAD, TRANSIT_KR, state.drawTransit);

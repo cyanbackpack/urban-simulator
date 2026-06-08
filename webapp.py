@@ -54,6 +54,25 @@ def _safe_terrain_path(file_name):
     return path if os.path.isfile(path) else None
 
 
+def _safe_dir(dir_name):
+    """Resolve a submissions directory (basename only) inside ROOT."""
+    name = os.path.basename((dir_name or "submissions_demo").rstrip("/"))
+    path = os.path.join(ROOT, name)
+    return path if os.path.isdir(path) else None
+
+
+def _safe_sub_path(dir_name, file_name):
+    """Resolve a submission file inside an allowed directory under ROOT."""
+    base = _safe_dir(dir_name)
+    if not base or not file_name:
+        return None
+    name = os.path.basename(file_name)
+    if not name.endswith(".json"):
+        return None
+    path = os.path.join(base, name)
+    return path if os.path.isfile(path) else None
+
+
 def list_terrains():
     out = []
     for path in sorted(glob.glob(os.path.join(ROOT, "terrain_*.json"))):
@@ -130,6 +149,53 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_json({"error": "unknown terrain"}, 404)
             with open(path, encoding="utf-8") as f:
                 return self._send_json(json.load(f))
+        if route == "/api/submissions":
+            base = _safe_dir((qs.get("dir") or [None])[0])
+            if not base:
+                return self._send_json([])
+            out = []
+            for path in sorted(glob.glob(os.path.join(base, "*.json"))):
+                out.append({"file": os.path.basename(path),
+                            "dir": os.path.basename(base)})
+            return self._send_json(out)
+        if route == "/api/submission":
+            path = _safe_sub_path((qs.get("dir") or [None])[0],
+                                  (qs.get("file") or [None])[0])
+            if not path:
+                return self._send_json({"error": "unknown submission"}, 404)
+            with open(path, encoding="utf-8") as f:
+                return self._send_json(json.load(f))
+        if route == "/api/leaderboard":
+            tpath = _safe_terrain_path((qs.get("file") or [None])[0])
+            base = _safe_dir((qs.get("dir") or [None])[0])
+            if not tpath or not base:
+                return self._send_json({"error": "unknown terrain or dir"}, 404)
+            with open(tpath, encoding="utf-8") as f:
+                terrain = json.load(f)
+            rows = []
+            for path in sorted(glob.glob(os.path.join(base, "*.json"))):
+                with open(path, encoding="utf-8") as f:
+                    sub = json.load(f)
+                try:
+                    r = S.run(terrain, sub)
+                except Exception as exc:
+                    r = {"status": "ERROR", "score": 0, "grade": "D",
+                         "reasons": [str(exc)]}
+                rows.append({
+                    "file": os.path.basename(path),
+                    "dir": os.path.basename(base),
+                    "name": sub.get("metadata", {}).get("objective")
+                            or os.path.basename(path),
+                    "status": r.get("status"),
+                    "score": r.get("score", 0),
+                    "grade": r.get("grade", "D"),
+                    "axes": r.get("axes", {}),
+                    "reasons": r.get("reasons", []),
+                })
+            rows.sort(key=lambda x: (x["status"] != "OK", -x["score"]))
+            return self._send_json({"terrain": terrain.get("name", ""),
+                                    "objective": terrain.get("objective", ""),
+                                    "rows": rows})
         if route == "/api/reference":
             path = _safe_terrain_path((qs.get("file") or [None])[0])
             if not path:

@@ -58,6 +58,7 @@ python webapp.py 8000        # 포트 생략 시 8000
 - **점 드래그**: 선택 모드에서 구역 정점·시설·이벤트를 끌어 이동, 드래그 중
   좌표/면적 표시
 - **Undo / Redo**: 모든 편집에 대해 (Ctrl+Z / Ctrl+Y, 버튼)
+- **스냅/그리드**: 격자(0.5/1/2.5 km) 표시 + 정점·점 배치/드래그를 격자에 스냅
 - **구역 색상·라벨**: 중심·상업 / 주거 / 산업·물류 / 공공·교육·의료 / 녹지
   카테고리로 그룹화한 팔레트와 범례, 지도 위 색상 라벨 칩
 - **이벤트 레이어 편집**: 지도의 이벤트를 클릭해 종류·성격(기회/재난/양면)·효과
@@ -65,8 +66,17 @@ python webapp.py 8000        # 포트 생략 시 8000
   편집한 이벤트는 `POST /api/score`의 `events` 오버라이드로 전달되어 **실제
   채점기로 점수 변화를 즉시 확인** 가능
 
+### 리더보드 · 비교
+
+헤더의 "리더보드" 버튼은 제출물 폴더(`submissions_demo/`)를 현재 지형으로 일괄
+채점해 순위표를 보여줍니다. 5축 미니 막대로 제출물을 비교하고, 현재 편집 중인
+제출물이 채점되어 있으면 같은 표에 "현재 작업" 행으로 끼워 넣어 내 순위를
+확인할 수 있습니다. 각 행의 "불러오기"로 해당 제출물을 편집기에 띄울 수 있습니다.
+
 엔드포인트: `GET /api/terrains`, `GET /api/terrain?file=`,
-`GET /api/reference?file=`, `POST /api/score`(`{terrain_file, submission, events?}`).
+`GET /api/reference?file=`, `GET /api/submissions?dir=`,
+`GET /api/submission?dir=&file=`, `GET /api/leaderboard?file=&dir=`,
+`POST /api/score`(`{terrain_file, submission, events?}`).
 
 `terrain_gen.py`와 `render2.py`는 SciPy/Matplotlib이 없어도 fallback으로 동작합니다. 기본적으로는 `numpy`와 `Pillow`가 필요합니다.
 

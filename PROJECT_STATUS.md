@@ -74,8 +74,10 @@ Balance sweep after calibration, seed 3:
   warning; grouped zone palette/labels; and an editable event layer that scores
   through the real scorer via the `events` override on `POST /api/score`.
   Stations and hubs are editable in-canvas too (place/drag/delete; hub count
-  feeds the transport axis). Remaining polish: snapping/grid, leaderboard and
-  side-by-side comparison views.
+  feeds the transport axis). Snap-to-grid with a visible grid, plus a web
+  leaderboard/comparison modal (batch-scores a submissions folder against the
+  current terrain and ranks it alongside the working plan) are also in.
+  Remaining polish: multi-terrain leaderboard pages and richer charts.
 
 ## Terrain Fidelity Note
 

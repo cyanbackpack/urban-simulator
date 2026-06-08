@@ -63,7 +63,35 @@ button.primary { border-color: var(--accent); color: var(--accent); }
 .radius { font-size: 12px; color: var(--muted); display: flex; gap: 5px; align-items: center; }
 .radius input { width: 72px; padding: 4px 6px; }
 .readout { margin-left: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.snaptoggle { font-size: 12px; color: var(--muted); display: flex; gap: 5px; align-items: center; cursor: pointer; }
 .hidden { display: none !important; }
+
+/* modal: leaderboard / comparison */
+.modal { position: fixed; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; width: min(860px, 94vw); max-height: 86vh; display: flex; flex-direction: column; }
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.modal-head h2 { margin: 0; font-size: 17px; }
+.modal-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.modal-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+.modal-body { padding: 12px 20px 20px; overflow-y: auto; }
+
+table.lb { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.lb th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+table.lb td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.lb .rk { color: var(--muted); width: 28px; }
+table.lb .sc { font-weight: 700; font-variant-numeric: tabular-nums; }
+table.lb .nm { max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lbrow.current { background: #2a2f25; }
+.lbrow.current .nm { color: var(--accent); font-weight: 700; }
+.lbrow.failed { opacity: .55; }
+.lb .gx { font-size: 11px; color: var(--fail); font-weight: 700; }
+.lb .grade { font-size: 12px; font-weight: 700; color: #15171a; border-radius: 5px; padding: 1px 8px; }
+.lb .grade.S { background: #ffd95a; } .lb .grade.A { background: #8fd14f; }
+.lb .grade.B { background: #5ab0e0; } .lb .grade.C { background: #e0a020; } .lb .grade.D { background: #e07050; }
+.lb .bars { display: flex; gap: 3px; align-items: flex-end; height: 28px; }
+.lb .mini { width: 9px; height: 26px; background: #15171a; border-radius: 2px; display: flex; align-items: flex-end; overflow: hidden; }
+.lb .mini > span { width: 100%; background: linear-gradient(180deg, #8fd14f, #5ab0e0); display: block; }
+.lb-load { font-size: 12px; padding: 4px 9px; }
 
 main { display: flex; gap: 16px; padding: 16px 20px; align-items: flex-start; }
 
