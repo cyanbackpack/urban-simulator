@@ -105,7 +105,7 @@ function setup() {
   $("downloadSubmission").addEventListener("click", downloadSubmission);
   $("runValidate").addEventListener("click", runValidate);
   $("runScore").addEventListener("click", runScore);
-  ["layerTerrain", "layerZones", "layerTransit", "layerEvents", "layerGrid"].forEach((id) => {
+  ["layerTerrain", "layerPlanning", "layerZones", "layerTransit", "layerEvents", "layerGrid"].forEach((id) => {
     $(id).addEventListener("change", drawMap);
   });
 
@@ -337,6 +337,7 @@ function drawMap() {
   mapTransform(size);
 
   if ($("layerTerrain").checked) drawTerrain(ctx);
+  if ($("layerPlanning").checked) drawPlanningLayers(ctx);
   if ($("layerGrid").checked) drawGrid(ctx);
   if ($("layerZones").checked) drawZones(ctx);
   if ($("layerTransit").checked) drawTransit(ctx);
@@ -364,6 +365,133 @@ function drawTerrain(ctx) {
       ctx.fillRect(sx, sy, s, s);
     }
   }
+}
+
+function drawPlanningLayers(ctx) {
+  const planning = state.terrain?.planning_layers;
+  if (!planning) return;
+
+  drawPlanningMasks(ctx, planning);
+  drawHydrology(ctx, planning);
+  drawPlanningBoundaries(ctx, planning);
+  drawPlanningContours(ctx, planning);
+  drawCorridors(ctx, planning);
+}
+
+function drawPlanningMasks(ctx, planning) {
+  const cell = state.terrain.cell_size_m;
+  const developmentRows = planning.development?.rows || [];
+  const floodRows = planning.hydrology?.floodplain_rows || [];
+  const basinRows = planning.hydrology?.basin_rows || [];
+  drawPlanningCells(ctx, basinRows, "B", "rgba(47, 116, 156, 0.08)", cell);
+  drawPlanningCells(ctx, floodRows, "F", "rgba(25, 118, 139, 0.14)", cell);
+  drawPlanningCells(ctx, developmentRows, "R", "rgba(211, 125, 34, 0.16)", cell);
+  drawPlanningCells(ctx, developmentRows, "N", "rgba(198, 55, 55, 0.18)", cell);
+}
+
+function drawPlanningCells(ctx, rows, mark, fill, cell) {
+  if (!rows.length) return;
+  ctx.save();
+  ctx.fillStyle = fill;
+  for (let y = 0; y < rows.length; y++) {
+    for (let x = 0; x < rows[y].length; x++) {
+      if (rows[y][x] !== mark) continue;
+      const sx = state.offsetX + x * cell * state.scale;
+      const sy = state.offsetY + y * cell * state.scale;
+      const size = Math.ceil(cell * state.scale) + 0.5;
+      ctx.fillRect(sx, sy, size, size);
+    }
+  }
+  ctx.restore();
+}
+
+function drawHydrology(ctx, planning) {
+  const hydrology = planning.hydrology || {};
+  drawMeterSegments(ctx, hydrology.watershed_edges, "rgba(36, 112, 135, 0.34)", 1);
+  drawMeterSegments(ctx, hydrology.floodplain_edges, "rgba(20, 99, 119, 0.46)", 1.2);
+  drawMeterSegments(ctx, hydrology.shoreline_segments, "rgba(242, 252, 249, 0.72)", 2.2);
+
+  (hydrology.river_paths || []).forEach((river) => {
+    const pts = river.path || [];
+    if (pts.length < 2) return;
+    drawWorldPath(ctx, pts, "rgba(238, 250, 255, 0.72)", 4.5);
+    drawWorldPath(ctx, pts, "rgba(31, 107, 154, 0.82)", 2);
+  });
+}
+
+function drawPlanningBoundaries(ctx, planning) {
+  const boundaries = planning.boundaries || {};
+  drawMeterSegments(ctx, boundaries.farmland, "rgba(128, 107, 38, 0.32)", 1);
+  drawMeterSegments(ctx, boundaries.wetland, "rgba(30, 108, 99, 0.44)", 1.2);
+  drawMeterSegments(ctx, boundaries.steep_slope, "rgba(96, 70, 47, 0.42)", 1);
+}
+
+function drawPlanningContours(ctx, planning) {
+  const contours = planning.contours || {};
+  const segments = contours.segments || [];
+  const major = contours.major_interval_m || 200;
+  const step = segments.length > 6000 ? 2 : 1;
+  ctx.save();
+  ctx.lineCap = "round";
+  for (let i = 0; i < segments.length; i += step) {
+    const [level, x1, y1, x2, y2] = segments[i];
+    const isMajor = level % major === 0;
+    ctx.strokeStyle = isMajor ? "rgba(60, 43, 25, 0.34)" : "rgba(70, 52, 31, 0.18)";
+    ctx.lineWidth = isMajor ? 1.35 : 0.75;
+    const a = toScreen([x1, y1]);
+    const b = toScreen([x2, y2]);
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawCorridors(ctx, planning) {
+  (planning.corridors || []).forEach((corridor) => {
+    const pts = corridor.path || [];
+    if (pts.length < 2) return;
+    const road = corridor.mode === "road";
+    drawWorldPath(ctx, pts, road ? "rgba(255, 255, 255, 0.86)" : "rgba(38, 42, 50, 0.72)", 5);
+    drawWorldPath(ctx, pts, road ? "rgba(204, 117, 45, 0.9)" : "rgba(126, 70, 150, 0.9)", 2.5, [8, 5]);
+  });
+}
+
+function drawMeterSegments(ctx, segments, color, width) {
+  if (!segments || !segments.length) return;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = "round";
+  segments.forEach((seg) => {
+    if (!seg || seg.length < 4) return;
+    const a = toScreen([seg[0], seg[1]]);
+    const b = toScreen([seg[2], seg[3]]);
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function drawWorldPath(ctx, pts, color, width, dash = []) {
+  if (!pts || pts.length < 2) return;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.setLineDash(dash);
+  ctx.beginPath();
+  pts.forEach((pt, i) => {
+    const [x, y] = toScreen(pt);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.restore();
 }
 
 function elevationShade(value, terrain) {
@@ -770,11 +898,13 @@ function deleteSelectedVertex() {
 }
 
 function updateStats() {
+  const corridors = state.terrain?.planning_layers?.corridors?.length || 0;
   $("editorStats").innerHTML = `
     <div><span>Zones</span><strong>${state.submission.zones.length}</strong></div>
     <div><span>Facilities</span><strong>${state.submission.facilities.length}</strong></div>
     <div><span>Transit</span><strong>${state.submission.transit.length}</strong></div>
     <div><span>Events</span><strong>${state.terrain?.events?.length || 0}</strong></div>
+    <div><span>Corridors</span><strong>${corridors}</strong></div>
   `;
 }
 

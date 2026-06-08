@@ -193,6 +193,116 @@ def draw_contours(draw, rows, elev, scale):
                 draw.line((x0, y0 + scale, x0 + scale, y0 + scale), fill=color, width=1)
 
 
+def draw_mask_rows(draw, mask_rows, mark, scale, fill, hatch=None):
+    if not mask_rows:
+        return
+    for y, row in enumerate(mask_rows):
+        for x, ch in enumerate(row):
+            if ch != mark:
+                continue
+            x0, y0 = x * scale, y * scale
+            x1, y1 = x0 + scale, y0 + scale
+            draw.rectangle((x0, y0, x1, y1), fill=fill)
+            if hatch and (x + y) % hatch[0] == 0:
+                draw.line((x0, y1, x1, y0), fill=hatch[1], width=1)
+
+
+def draw_meter_segments(draw, segments, scale, color, width=1, cell=CELL_M):
+    for seg in segments or []:
+        if len(seg) < 4:
+            continue
+        x1, y1, x2, y2 = seg[:4]
+        draw.line(
+            (x1 / cell * scale, y1 / cell * scale, x2 / cell * scale, y2 / cell * scale),
+            fill=color,
+            width=width,
+        )
+
+
+def draw_planning_contours(draw, planning, rows, elev, scale):
+    contours = (planning or {}).get("contours", {})
+    segments = contours.get("segments") or []
+    if not segments:
+        draw_contours(draw, rows, elev, scale)
+        return
+    cell = planning.get("cell_size_m", CELL_M)
+    major = contours.get("major_interval_m", 200)
+    minor_color = (92, 74, 46, 72)
+    major_color = (68, 52, 32, 125)
+    for level, x1, y1, x2, y2 in segments:
+        color = major_color if level % major == 0 else minor_color
+        width = 2 if level % major == 0 and scale >= 5 else 1
+        draw.line(
+            (x1 / cell * scale, y1 / cell * scale, x2 / cell * scale, y2 / cell * scale),
+            fill=color,
+            width=width,
+        )
+
+
+def draw_planning_layers(draw, t, rows, elev, scale):
+    planning = t.get("planning_layers") or {}
+    if not planning:
+        draw_contours(draw, rows, elev, scale)
+        return
+
+    hydrology = planning.get("hydrology", {})
+    draw_mask_rows(draw, hydrology.get("basin_rows"), "B", scale, (78, 144, 182, 24))
+    draw_mask_rows(draw, hydrology.get("floodplain_rows"), "F", scale, (45, 133, 156, 46),
+                   hatch=(5, (40, 108, 128, 72)))
+
+    development = planning.get("development", {})
+    dev_rows = development.get("rows") or []
+    draw_mask_rows(draw, dev_rows, "R", scale, (214, 137, 45, 42),
+                   hatch=(7, (170, 91, 35, 72)))
+    draw_mask_rows(draw, dev_rows, "N", scale, (198, 64, 64, 54),
+                   hatch=(4, (160, 40, 40, 90)))
+
+    hydrology_color = (38, 108, 153, 165)
+    flood_color = (38, 118, 132, 110)
+    shore_color = (232, 248, 246, 190)
+    draw_meter_segments(draw, hydrology.get("watershed_edges"), scale, flood_color, width=1)
+    draw_meter_segments(draw, hydrology.get("floodplain_edges"), scale, (22, 105, 124, 135), width=1)
+    draw_meter_segments(draw, hydrology.get("shoreline_segments"), scale, shore_color, width=max(2, scale // 3))
+
+    for river in hydrology.get("river_paths", []):
+        path = river.get("path") or []
+        if len(path) < 2:
+            continue
+        pts = [(x / t.get("cell_size_m", CELL_M) * scale, y / t.get("cell_size_m", CELL_M) * scale) for x, y in path]
+        draw.line(pts, fill=(238, 250, 255, 170), width=max(3, scale // 2), joint="curve")
+        draw.line(pts, fill=hydrology_color, width=max(1, scale // 3), joint="curve")
+
+    boundaries = planning.get("boundaries", {})
+    draw_meter_segments(draw, boundaries.get("farmland"), scale, (137, 117, 42, 110), width=1)
+    draw_meter_segments(draw, boundaries.get("wetland"), scale, (33, 117, 106, 125), width=1)
+    draw_meter_segments(draw, boundaries.get("steep_slope"), scale, (106, 77, 51, 118), width=1)
+
+    draw_planning_contours(draw, planning, rows, elev, scale)
+
+    label_font = font(max(9, int(scale * 1.15)), bold=True)
+    cell = t.get("cell_size_m", CELL_M)
+    for corridor in planning.get("corridors", []):
+        path = corridor.get("path") or []
+        if len(path) < 2:
+            continue
+        pts = [(x / cell * scale, y / cell * scale) for x, y in path]
+        mode = corridor.get("mode")
+        core = (204, 117, 45, 205) if mode == "road" else (126, 70, 150, 205)
+        casing = (255, 255, 255, 205) if mode == "road" else (37, 41, 49, 185)
+        draw.line(pts, fill=casing, width=max(4, int(scale * 0.9)), joint="curve")
+        draw.line(pts, fill=core, width=max(2, int(scale * 0.42)), joint="curve")
+        if scale >= 6:
+            mid = pts[len(pts) // 2]
+            label = corridor.get("label", "")[:28]
+            anchor = "lm"
+            lx = mid[0] + 5
+            if mid[0] > draw.im.size[0] - 220:
+                lx = mid[0] - 7
+                anchor = "rm"
+            draw.text((lx, mid[1] - 5), label, anchor=anchor,
+                      fill=(*core[:3], 225), font=label_font)
+
+
 def draw_events(draw, t, scale):
     cell = t.get("cell_size_m", CELL_M)
     badge_font = font(max(11, int(scale * 1.7)), bold=True)
@@ -221,7 +331,7 @@ def draw_overlays(img, t, rows, elev, scale):
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     draw_cell_edges(draw, rows, scale)
-    draw_contours(draw, rows, elev, scale)
+    draw_planning_layers(draw, t, rows, elev, scale)
     draw_events(draw, t, scale)
 
     title_font = font(max(17, int(scale * 2.2)), bold=True)

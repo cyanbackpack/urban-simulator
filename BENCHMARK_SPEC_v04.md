@@ -36,6 +36,7 @@ Terrain files use 500m cells over a 200 x 150 grid, or 100km x 75km.
   "climate": {"profile": "temperate lake basin"},
   "layer_stats": {},
   "elevation_m": [[123, 124]],
+  "planning_layers": {},
   "events": [],
   "rows": ["..TT~~"]
 }
@@ -51,6 +52,18 @@ Terrain files use 500m cells over a 200 x 150 grid, or 100km x 75km.
 - `~` open water
 
 Water and steep cells are non-buildable. Forest and wetland are buildable but environmentally sensitive.
+
+### Optional Planning Layers
+
+Terrain files may include `planning_layers` for visualization and authoring support. These layers are deterministic map aids, not separate hidden scoring inputs.
+
+- `contours`: elevation contour segments.
+- `hydrology`: river centerlines, shorelines, watershed edges, floodplain edges, and basin/floodplain masks.
+- `boundaries`: farmland, wetland, and steep-slope boundary segments.
+- `development`: prime, conditional, restricted, and no-build suitability rows.
+- `corridors`: road and rail/freight candidate axes.
+
+The scorer remains compatible with terrain files that omit `planning_layers`.
 
 ## Terrain Archetypes
 

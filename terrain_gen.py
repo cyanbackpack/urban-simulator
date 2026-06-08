@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-CityBench terrain generator v0.4.
+CityBench terrain generator v0.5.
 
 Procedural regional terrain with elevation, slope, water, land cover, climate
-metadata, and static coordinate events. The submission/scoring surface is still
-the compact row raster, but generated scenarios now carry richer layers for
-rendering and future UI work.
+metadata, static coordinate events, and planning-grade visual layers. The
+submission/scoring surface is still the compact row raster, but generated
+scenarios now carry richer layers for rendering and future UI work.
 
     python terrain_gen.py <type> <objective> [seed] [out.json]
 
@@ -203,7 +203,7 @@ def flow_accumulation(elev):
     return acc
 
 
-def river_mask(ttype, elev, water):
+def river_layers(ttype, elev, water):
     if ttype == "twin_coast":
         q = 0.982
     elif ttype == "great_delta":
@@ -217,15 +217,15 @@ def river_mask(ttype, elev, water):
     acc = flow_accumulation(elev)
     river = (acc > np.quantile(acc, q)) & (~water)
     river = gaussian_filter(river.astype(float), 0.55) > 0.24
-    return river
+    return river, acc
 
 
 def build_grid(ttype, rng):
     base = fbm(rng)
     elev = shape(ttype, base, rng)
-    water = elev < SEA[ttype]
-    river = river_mask(ttype, elev, water)
-    water = water | river
+    open_water = elev < SEA[ttype]
+    river, flow_acc = river_layers(ttype, elev, open_water)
+    water = open_water | river
 
     smooth_elev = gaussian_filter(elev, 1.0)
     gy, gx = np.gradient(smooth_elev)
@@ -292,6 +292,9 @@ def build_grid(ttype, rng):
         "slope": slope,
         "moisture": moisture,
         "water": water,
+        "open_water": open_water,
+        "river": river,
+        "flow_acc": flow_acc,
         "steep": steep,
         "wetland": wetland,
         "forest": forest,
@@ -387,6 +390,304 @@ def place_events(ttype, layers, rng):
     return events
 
 
+def mask_to_rows(mask, mark):
+    return ["".join(mark if value else "." for value in row) for row in mask]
+
+
+def segments_for_mask(mask, against=None):
+    h, w = mask.shape
+    out = []
+    for y in range(h):
+        for x in range(w):
+            if not mask[y, x]:
+                continue
+            for dx, dy, seg in (
+                (1, 0, (x + 1, y, x + 1, y + 1)),
+                (-1, 0, (x, y, x, y + 1)),
+                (0, 1, (x, y + 1, x + 1, y + 1)),
+                (0, -1, (x, y, x + 1, y)),
+            ):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < w and 0 <= ny < h:
+                    outside = not mask[ny, nx] if against is None else bool(against[ny, nx])
+                else:
+                    outside = True
+                if outside:
+                    out.append([int(v * CELL) for v in seg])
+    return out
+
+
+def contour_interval(elev, rows):
+    land = rows != "~"
+    elev_min = float(elev[land].min())
+    elev_max = float(elev[land].max())
+    span = elev_max - elev_min
+    if span > 1200:
+        interval = 200
+    elif span > 650:
+        interval = 100
+    else:
+        interval = 50
+    return interval, interval * 4, elev_min, elev_max
+
+
+def contour_segments(rows, elev_m):
+    interval, major_interval, elev_min, elev_max = contour_interval(elev_m, rows)
+    first = int(np.ceil(elev_min / interval) * interval)
+    last = int(np.floor(elev_max / interval) * interval)
+    levels = list(range(first, last + 1, interval))
+    segments = []
+    h, w = rows.shape
+
+    def crossing(x1, y1, z1, x2, y2, z2, level):
+        if z1 == z2:
+            return None
+        if not ((z1 <= level <= z2) or (z2 <= level <= z1)):
+            return None
+        ratio = (level - z1) / (z2 - z1)
+        x = (x1 + (x2 - x1) * ratio) * CELL
+        y = (y1 + (y2 - y1) * ratio) * CELL
+        return int(round(x)), int(round(y))
+
+    for level in levels:
+        for y in range(h - 1):
+            for x in range(w - 1):
+                if np.any(rows[y:y + 2, x:x + 2] == "~"):
+                    continue
+                corners = (
+                    (x, y, elev_m[y, x]),
+                    (x + 1, y, elev_m[y, x + 1]),
+                    (x + 1, y + 1, elev_m[y + 1, x + 1]),
+                    (x, y + 1, elev_m[y + 1, x]),
+                )
+                pts = []
+                for a, b in ((0, 1), (1, 2), (2, 3), (3, 0)):
+                    hit = crossing(*corners[a], *corners[b], level)
+                    if hit and hit not in pts:
+                        pts.append(hit)
+                if len(pts) == 2:
+                    segments.append([level, pts[0][0], pts[0][1], pts[1][0], pts[1][1]])
+                elif len(pts) == 4:
+                    segments.append([level, pts[0][0], pts[0][1], pts[1][0], pts[1][1]])
+                    segments.append([level, pts[2][0], pts[2][1], pts[3][0], pts[3][1]])
+    return {
+        "interval_m": interval,
+        "major_interval_m": major_interval,
+        "segments": segments,
+    }
+
+
+def connected_components(mask, min_cells=8):
+    h, w = mask.shape
+    seen = np.zeros_like(mask, dtype=bool)
+    comps = []
+    for sy in range(h):
+        for sx in range(w):
+            if not mask[sy, sx] or seen[sy, sx]:
+                continue
+            stack = [(sy, sx)]
+            seen[sy, sx] = True
+            comp = []
+            while stack:
+                y, x = stack.pop()
+                comp.append((y, x))
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        if dx == 0 and dy == 0:
+                            continue
+                        ny, nx = y + dy, x + dx
+                        if 0 <= ny < h and 0 <= nx < w and mask[ny, nx] and not seen[ny, nx]:
+                            seen[ny, nx] = True
+                            stack.append((ny, nx))
+            if len(comp) >= min_cells:
+                comps.append(comp)
+    comps.sort(key=len, reverse=True)
+    return comps
+
+
+def simplify_cell_path(points, step=5):
+    if len(points) <= 2:
+        return points
+    simplified = [points[0]]
+    prev_dir = None
+    for i in range(1, len(points) - 1):
+        last = simplified[-1]
+        cur = points[i]
+        nxt = points[i + 1]
+        direction = (
+            int(np.sign(nxt[0] - cur[0])),
+            int(np.sign(nxt[1] - cur[1])),
+        )
+        dist = abs(cur[0] - last[0]) + abs(cur[1] - last[1])
+        if dist >= step or direction != prev_dir:
+            simplified.append(cur)
+            prev_dir = direction
+    simplified.append(points[-1])
+    return simplified
+
+
+def river_paths(river, flow_acc):
+    paths = []
+    for idx, comp in enumerate(connected_components(river, min_cells=10)[:5]):
+        ys = np.array([p[0] for p in comp])
+        xs = np.array([p[1] for p in comp])
+        span_x = xs.max() - xs.min()
+        span_y = ys.max() - ys.min()
+        pts = []
+        if span_x >= span_y:
+            for x in range(int(xs.min()), int(xs.max()) + 1):
+                yy = ys[xs == x]
+                if len(yy):
+                    pts.append((x, int(round(float(np.median(yy))))))
+        else:
+            for y in range(int(ys.min()), int(ys.max()) + 1):
+                xx = xs[ys == y]
+                if len(xx):
+                    pts.append((int(round(float(np.median(xx)))), y))
+        pts = simplify_cell_path(pts, step=4)
+        if len(pts) < 2:
+            continue
+        max_acc = float(flow_acc[ys, xs].max())
+        paths.append({
+            "name": f"River channel {idx + 1}",
+            "rank": "primary" if idx == 0 else "secondary",
+            "width_m": int(min(900, 160 + np.log1p(max_acc) * 52)),
+            "path": [[int((x + 0.5) * CELL), int((y + 0.5) * CELL)] for x, y in pts],
+        })
+    return paths
+
+
+def least_cost_axis_path(cost, axis):
+    if axis == "ns":
+        path = least_cost_axis_path(cost.T, "ew")
+        return [(y, x) for x, y in path]
+
+    h, w = cost.shape
+    dp = np.full((h, w), np.inf)
+    parent = np.full((h, w), -1, dtype=int)
+    dp[:, 0] = cost[:, 0]
+    for x in range(1, w):
+        for y in range(h):
+            candidates = []
+            for py in (y - 1, y, y + 1):
+                if 0 <= py < h:
+                    candidates.append((dp[py, x - 1], py))
+            best, best_y = min(candidates, key=lambda item: item[0])
+            dp[y, x] = best + cost[y, x]
+            parent[y, x] = best_y
+
+    y = int(np.argmin(dp[:, -1]))
+    cells = []
+    for x in range(w - 1, -1, -1):
+        cells.append((x, y))
+        y = int(parent[y, x]) if x > 0 else y
+    cells.reverse()
+    return simplify_cell_path(cells, step=6)
+
+
+def corridor_layers(layers):
+    rows = layers["rows"]
+    cost = (
+        1.0
+        + layers["slope"] * 5.0
+        + layers["water_influence"] * 1.2
+    )
+    cost[rows == "F"] += 0.35
+    cost[rows == "T"] += 1.6
+    cost[rows == "w"] += 5.5
+    cost[rows == "^"] += 12.0
+    cost[rows == "~"] += 70.0
+
+    corridors = []
+    for axis, ctype, label, mode in (
+        ("ew", "arterial_candidate", "Low-impact east-west arterial reserve", "road"),
+        ("ns", "rail_candidate", "North-south freight/rail reserve", "rail"),
+    ):
+        cells = least_cost_axis_path(cost, axis)
+        path = [[int((x + 0.5) * CELL), int((y + 0.5) * CELL)] for x, y in cells]
+        avg_cost = float(np.mean([cost[y, x] for x, y in cells]))
+        corridors.append({
+            "type": ctype,
+            "mode": mode,
+            "label": label,
+            "average_cost": round(avg_cost, 2),
+            "path": path,
+        })
+    return corridors
+
+
+def development_layer(layers, events):
+    rows = layers["rows"]
+    dev = np.full(rows.shape, "P", dtype="<U1")
+    slope = layers["slope"]
+    water_influence = layers["water_influence"]
+
+    dev[rows == "F"] = "C"
+    dev[rows == "T"] = "C"
+    dev[(rows == "w") | (water_influence > 0.42)] = "R"
+    dev[(slope > np.quantile(slope[rows != "~"], 0.78)) & (rows != "~")] = "R"
+    dev[(rows == "~") | (rows == "^")] = "N"
+
+    ys, xs = np.mgrid[0:H, 0:W]
+    for event in events:
+        radius = event.get("radius", 0) / CELL
+        if radius <= 0:
+            continue
+        cx = event.get("x", 0) / CELL
+        cy = event.get("y", 0) / CELL
+        inside = np.hypot((xs + 0.5) - cx, (ys + 0.5) - cy) <= radius
+        klass = event.get("class")
+        if klass == "hazard":
+            dev[(inside) & (dev != "N")] = "R"
+        elif klass == "mixed":
+            dev[(inside) & (dev == "P")] = "C"
+
+    stats = {key: int(np.sum(dev == key)) for key in ("P", "C", "R", "N")}
+    return {
+        "legend": {
+            "P": "prime developable",
+            "C": "conditional / mitigation required",
+            "R": "restricted development",
+            "N": "no-build",
+        },
+        "stats": stats,
+        "rows": ["".join(r) for r in dev],
+    }
+
+
+def build_planning_layers(layers, events):
+    rows = layers["rows"]
+    land = rows != "~"
+    lowland = layers["elev"] < np.quantile(layers["elev"][land], 0.52)
+    basin = land & lowland & (layers["water_influence"] > 0.20)
+    floodplain = land & (layers["water_influence"] > 0.34) & (
+        layers["elev"] < np.quantile(layers["elev"][land], 0.46)
+    )
+
+    boundaries = {
+        "farmland": segments_for_mask(layers["farmland"]),
+        "wetland": segments_for_mask(layers["wetland"]),
+        "steep_slope": segments_for_mask(layers["steep"]),
+    }
+    hydrology = {
+        "river_paths": river_paths(layers["river"], layers["flow_acc"]),
+        "shoreline_segments": segments_for_mask(layers["open_water"], against=land),
+        "watershed_edges": segments_for_mask(basin),
+        "floodplain_edges": segments_for_mask(floodplain),
+        "basin_rows": mask_to_rows(basin, "B"),
+        "floodplain_rows": mask_to_rows(floodplain, "F"),
+    }
+    return {
+        "version": "0.5",
+        "cell_size_m": CELL,
+        "contours": contour_segments(rows, layers["elev_m"]),
+        "hydrology": hydrology,
+        "boundaries": boundaries,
+        "development": development_layer(layers, events),
+        "corridors": corridor_layers(layers),
+    }
+
+
 def layer_stats(rows, layers):
     stats = {key: int(np.sum(rows == key)) for key in LANDCOVER_LEGEND}
     land = rows != "~"
@@ -435,6 +736,7 @@ def build(ttype, objective, seed=0):
     rows_arr = layers["rows"]
     rows = ["".join(r) for r in rows_arr]
     events = place_events(ttype, layers, rng)
+    planning_layers = build_planning_layers(layers, events)
 
     buildable = int(np.sum((rows_arr != "~") & (rows_arr != "^")))
     bkm2 = buildable * (CELL / 1000) ** 2
@@ -456,6 +758,7 @@ def build(ttype, objective, seed=0):
         "climate": climate_profile(ttype, layers),
         "layer_stats": layer_stats(rows_arr, layers),
         "elevation_m": layers["elev_m"].tolist(),
+        "planning_layers": planning_layers,
         "events": events,
         "rows": rows,
     }

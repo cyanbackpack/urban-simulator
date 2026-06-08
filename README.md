@@ -82,6 +82,18 @@ python balance_test.py balance_report.csv 3
 - 웹 UI 또는 비교 대시보드
 - 실제 GIS/OSM/DEM 데이터 파이프라인
 
+## Terrain planning layers
+
+Terrain JSON files now include optional `planning_layers` data for map-like urban planning views:
+
+- `contours`: elevation contour segments with minor/major intervals.
+- `hydrology`: river centerlines, shorelines, watershed edges, floodplain edges, and basin/floodplain masks.
+- `boundaries`: farmland, wetland, and steep-slope boundary segments.
+- `development`: prime, conditional, restricted, and no-build suitability rows.
+- `corridors`: low-impact road and rail/freight candidate axes.
+
+These layers are visual/planning aids. The deterministic scorer still uses the compact `rows`, vector submission geometry, terrain events, and terrain metadata.
+
 ## Web UI
 
 ```powershell
@@ -90,4 +102,4 @@ python web_server.py
 
 Open `http://127.0.0.1:8765/web/`.
 
-The editor can load terrain/submission JSON, add or edit zone polygons, insert/delete vertices, place facilities, draw transit paths, run live validation/scoring through the local API, and export a submission JSON. The dashboard can load leaderboard and balance CSV files for score comparison.
+The editor can load terrain/submission JSON, show planning-grade terrain overlays, add or edit zone polygons, insert/delete vertices, place facilities, draw transit paths, run live validation/scoring through the local API, and export a submission JSON. The dashboard can load leaderboard and balance CSV files for score comparison.

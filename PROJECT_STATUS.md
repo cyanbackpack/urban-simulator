@@ -1,6 +1,6 @@
 # Project Status
 
-Last checked: 2026-06-07
+Last checked: 2026-06-08
 
 ## Completed
 
@@ -8,6 +8,7 @@ Last checked: 2026-06-07
 - [x] Deterministic vector submission scorer.
 - [x] Five terrain archetypes.
 - [x] Richer v0.4 procedural terrain layers: elevation, water, slope, forest, wetland, farmland, climate metadata.
+- [x] v0.5 planning-grade terrain layers: contours, hydrology, land-cover boundaries, development suitability, road/rail candidate corridors.
 - [x] Static event system with opportunity, hazard, and mixed event classes.
 - [x] Event scoring for resources, harbor, flood, fault, wind, aquifer, scenic, geothermal, fertile soil, landslide, typhoon, and subsidence.
 - [x] Master-plan renderer with fallback PIL path.
@@ -25,12 +26,13 @@ Last checked: 2026-06-07
 ## Current Verification
 
 - [x] `python -m py_compile geometry.py terrain_gen.py score_v2.py render2.py render_terrain.py preview_terrains.py validate.py make_fitted.py`
-- [x] Generate all five v0.4 terrain JSON files.
+- [x] Generate all five v0.5 terrain JSON files.
 - [x] Generate Lake Core fitted demo submission.
 - [x] Score Lake Core demo submission.
 - [x] Render planning map PNG.
 - [x] Render detailed terrain PNG.
 - [x] Render five-terrain preview PNG.
+- [x] Verify planning-layer terrain rendering and web JS syntax.
 - [x] Validate demo submission with `validate.py`.
 - [x] Generate Lake Core reference submission with `make_reference.py`.
 - [x] Generate leaderboard CSV/PNG with `leaderboard.py`.
@@ -59,7 +61,8 @@ Latest balance sweep, seed 3:
 - [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
 - [x] Add web submission and visualization UI.
 - [x] Connect the web editor directly to local scorer/validator through a backend service.
+- [x] Upgrade terrain detail toward urban-planning map fidelity with planning overlays.
 
 ## Terrain Fidelity Note
 
-The current renderer is a deterministic procedural visualization, not Google Maps imagery. Reaching actual Google Maps-level fidelity would require external geographic data such as DEM elevation, land-cover rasters, hydrography, roads, OSM features, or licensed map tiles. The current next-best path is to keep improving generated layers while keeping the benchmark deterministic and redistributable.
+The current renderer is a deterministic procedural visualization, not Google Maps imagery. It now includes planning-grade generated overlays such as contour segments, hydrology, watershed/floodplain masks, land-cover boundaries, development suitability, and road/rail candidate corridors. Reaching actual Google Maps-level fidelity would still require external geographic data such as DEM elevation, land-cover rasters, hydrography, roads, OSM features, or licensed map tiles.
