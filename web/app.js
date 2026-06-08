@@ -60,7 +60,8 @@ const state = {
   offsetX: 0,
   offsetY: 0,
   leaderboardRows: [],
-  balanceRows: []
+  balanceRows: [],
+  liveResult: null
 };
 
 function emptySubmission() {
@@ -102,6 +103,8 @@ function setup() {
   $("deleteVertex").addEventListener("click", deleteSelectedVertex);
   $("deleteSelected").addEventListener("click", deleteSelected);
   $("downloadSubmission").addEventListener("click", downloadSubmission);
+  $("runValidate").addEventListener("click", runValidate);
+  $("runScore").addEventListener("click", runScore);
   ["layerTerrain", "layerZones", "layerTransit", "layerEvents", "layerGrid"].forEach((id) => {
     $(id).addEventListener("change", drawMap);
   });
@@ -195,6 +198,102 @@ function loadSubmission(submission) {
   state.selected = null;
   updateJson();
   drawMap();
+}
+
+function currentApiPayload() {
+  if (!state.terrain) throw new Error("Load a terrain first.");
+  return { terrain: state.terrain, submission: state.submission };
+}
+
+async function postApi(path, payload) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (err) {
+    throw new Error(`API returned non-JSON response. Start with python web_server.py. (${res.status})`);
+  }
+  if (!res.ok) throw new Error(data.error || `API request failed (${res.status})`);
+  return data;
+}
+
+async function runValidate() {
+  setScoreDetails("Running validation...");
+  try {
+    const result = await postApi("/api/validate", currentApiPayload());
+    state.liveResult = { type: "validate", data: result, stale: false };
+    renderLiveResult();
+  } catch (err) {
+    setScoreDetails(apiErrorMessage(err), "error");
+  }
+}
+
+async function runScore() {
+  setScoreDetails("Running score...");
+  try {
+    const result = await postApi("/api/score", currentApiPayload());
+    state.liveResult = { type: "score", data: result, stale: false };
+    renderLiveResult();
+  } catch (err) {
+    setScoreDetails(apiErrorMessage(err), "error");
+  }
+}
+
+function apiErrorMessage(err) {
+  return `${escapeHtml(err.message)}<br><br>Live scoring requires the local API server:<br><code>python web_server.py</code>`;
+}
+
+function setScoreDetails(html, tone = "") {
+  const el = $("scoreDetails");
+  el.className = `details score-details ${tone}`.trim();
+  el.innerHTML = html;
+}
+
+function markLiveResultStale() {
+  if (state.liveResult) {
+    state.liveResult.stale = true;
+    renderLiveResult();
+  }
+}
+
+function renderLiveResult() {
+  if (!state.liveResult) return;
+  const { type, data, stale } = state.liveResult;
+  const tone = data.status === "OK" || data.score_status === "OK" ? "ok" : "fail";
+  if (type === "score") {
+    const axes = data.axes || {};
+    const axisRows = AXES.map((axis) => `<div><span>${axis}</span><strong>${Number(axes[axis] || 0).toFixed(0)}</strong></div>`).join("");
+    const reasons = (data.reasons || []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+    setScoreDetails(`
+      ${stale ? `<div class="stale">Edited after this result</div>` : ""}
+      <div class="score-head ${tone}">
+        <strong>${escapeHtml(data.status || "")}</strong>
+        <span>${data.score ?? 0} ${data.grade ? `(${data.grade})` : ""}</span>
+      </div>
+      <div class="score-grid">${axisRows}</div>
+      <div class="score-meta">base ${data.base_1000 ?? 0} · fit ${data.fit_bonus ?? 0} · events ${data.event_score ?? 0}</div>
+      ${reasons ? `<ul class="reason-list">${reasons}</ul>` : ""}
+    `, tone);
+  } else {
+    const reasons = (data.reasons || []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+    const budget = data.budget || {};
+    const capacity = data.capacity || {};
+    setScoreDetails(`
+      ${stale ? `<div class="stale">Edited after this result</div>` : ""}
+      <div class="score-head ${tone}">
+        <strong>${escapeHtml(data.status || "")}</strong>
+        <span>${data.score ?? 0} ${data.grade ? `(${data.grade})` : ""}</span>
+      </div>
+      <div class="score-meta">spent ${budget.spent ?? "-"} / ${budget.limit ?? "-"}</div>
+      <div class="score-meta">res ${capacity.residents ?? "-"} · jobs ${capacity.jobs ?? "-"}</div>
+      ${reasons ? `<ul class="reason-list">${reasons}</ul>` : `<div class="pass-line">Hard gates passed.</div>`}
+    `, tone);
+  }
 }
 
 function fitCanvas(canvas) {
@@ -692,6 +791,7 @@ function updateSelectionDetails() {
 
 function updateJson(redraw = true) {
   $("jsonPreview").value = JSON.stringify(state.submission, null, 2);
+  markLiveResultStale();
   if (redraw) drawMap();
 }
 

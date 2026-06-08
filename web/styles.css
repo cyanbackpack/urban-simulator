@@ -196,6 +196,13 @@ select {
   grid-column: 1 / -1;
 }
 
+.button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -246,6 +253,94 @@ select {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.score-details {
+  min-height: 140px;
+}
+
+.score-details.error {
+  border-color: #e0b7b7;
+  background: #fff8f8;
+  color: #8a3636;
+}
+
+.score-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.score-head strong {
+  font-size: 18px;
+}
+
+.score-head span {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.score-head.ok span {
+  color: var(--good);
+}
+
+.score-head.fail span,
+.score-head.fail strong {
+  color: var(--danger);
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 9px;
+}
+
+.score-grid div {
+  border: 1px solid #ded8ca;
+  background: #faf9f5;
+  border-radius: 5px;
+  padding: 6px;
+}
+
+.score-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.score-grid strong {
+  font-size: 15px;
+}
+
+.score-meta,
+.pass-line,
+.stale {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.stale {
+  color: var(--accent-2);
+  font-weight: 700;
+}
+
+.reason-list {
+  margin: 9px 0 0;
+  padding-left: 18px;
+  color: #8a3636;
+  font-size: 12px;
+}
+
+.score-details code {
+  font-family: Consolas, monospace;
+  background: #f0ede2;
+  border: 1px solid #ded8ca;
+  border-radius: 4px;
+  padding: 1px 4px;
 }
 
 .check-row {

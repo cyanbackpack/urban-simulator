@@ -20,6 +20,7 @@ Last checked: 2026-06-07
 - [x] 5 terrain x 5 objective balance-test runner.
 - [x] Browser-based polygon editor prototype.
 - [x] Browser-based leaderboard comparison dashboard.
+- [x] Local web scorer/validator API.
 
 ## Current Verification
 
@@ -34,6 +35,7 @@ Last checked: 2026-06-07
 - [x] Generate Lake Core reference submission with `make_reference.py`.
 - [x] Generate leaderboard CSV/PNG with `leaderboard.py`.
 - [x] Run 25-combination balance test with `balance_test.py`.
+- [x] Verify local API payload scoring and validation helpers.
 
 Latest balance sweep, seed 3:
 
@@ -56,7 +58,7 @@ Latest balance sweep, seed 3:
 - [ ] Add event synergy rules where useful, such as mineral + freight rail + harbor.
 - [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
 - [x] Add web submission and visualization UI.
-- [ ] Connect the web editor directly to local scorer/validator through a backend service.
+- [x] Connect the web editor directly to local scorer/validator through a backend service.
 
 ## Terrain Fidelity Note
 

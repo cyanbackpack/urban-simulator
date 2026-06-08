@@ -85,9 +85,9 @@ python balance_test.py balance_report.csv 3
 ## Web UI
 
 ```powershell
-python -m http.server 8765 --bind 127.0.0.1
+python web_server.py
 ```
 
 Open `http://127.0.0.1:8765/web/`.
 
-The editor can load terrain/submission JSON, add or edit zone polygons, insert/delete vertices, place facilities, draw transit paths, and export a submission JSON. The dashboard can load leaderboard and balance CSV files for score comparison.
+The editor can load terrain/submission JSON, add or edit zone polygons, insert/delete vertices, place facilities, draw transit paths, run live validation/scoring through the local API, and export a submission JSON. The dashboard can load leaderboard and balance CSV files for score comparison.
