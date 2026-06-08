@@ -45,6 +45,7 @@ python balance_test.py balance_report.csv 3
 - `make_reference.py`: 지형별 기준 제출물 생성기
 - `leaderboard.py`: 제출물 폴더 일괄 채점 및 CSV/PNG 리더보드 생성
 - `balance_test.py`: 5지형 x 5목적 기준 밸런스 테스트
+- `web/`: 폴리곤 편집기와 리더보드 비교 대시보드
 - `BENCHMARK_SPEC_v04.md`: 현재 벤치마크 스펙
 - `make_fitted.py`: Lake Core 데모 제출물 생성기
 - `HANDOFF.md`: 인수인계 메모
@@ -80,3 +81,13 @@ python balance_test.py balance_report.csv 3
 - 5지형 x 5목적 밸런스 보정
 - 웹 UI 또는 비교 대시보드
 - 실제 GIS/OSM/DEM 데이터 파이프라인
+
+## Web UI
+
+```powershell
+python -m http.server 8765 --bind 127.0.0.1
+```
+
+Open `http://127.0.0.1:8765/web/`.
+
+The editor can load terrain/submission JSON, add or edit zone polygons, place facilities, draw transit paths, and export a submission JSON. The dashboard can load leaderboard and balance CSV files for score comparison.

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CityBench Workbench</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>CityBench Workbench</h1>
+        <p id="scenarioLine">No scenario loaded</p>
+      </div>
+      <nav class="tabs" aria-label="Views">
+        <button class="tab active" data-view="editor">Editor</button>
+        <button class="tab" data-view="dashboard">Dashboard</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="editorView" class="view active">
+        <aside class="side-panel">
+          <section class="panel-block">
+            <div class="panel-title">Data</div>
+            <button id="loadBundled" class="primary">Load bundled demo</button>
+            <label class="file-control">
+              <span>Terrain JSON</span>
+              <input id="terrainFile" type="file" accept=".json,application/json">
+            </label>
+            <label class="file-control">
+              <span>Submission JSON</span>
+              <input id="submissionFile" type="file" accept=".json,application/json">
+            </label>
+          </section>
+
+          <section class="panel-block">
+            <div class="panel-title">Mode</div>
+            <div class="segmented" id="modeButtons">
+              <button class="active" data-mode="select" title="Select">Select</button>
+              <button data-mode="zone" title="Zone polygon">Zone</button>
+              <button data-mode="facility" title="Facility point">Facility</button>
+              <button data-mode="transit" title="Transit line">Transit</button>
+              <button data-mode="station" title="Station point">Station</button>
+              <button data-mode="hub" title="Hub point">Hub</button>
+            </div>
+          </section>
+
+          <section class="panel-block">
+            <div class="panel-title">Types</div>
+            <label>
+              <span>Zone</span>
+              <select id="zoneType"></select>
+            </label>
+            <label>
+              <span>Facility</span>
+              <select id="facilityType"></select>
+            </label>
+            <label>
+              <span>Transit</span>
+              <select id="transitType"></select>
+            </label>
+          </section>
+
+          <section class="panel-block command-grid">
+            <button id="finishShape">Finish</button>
+            <button id="undoPoint">Undo point</button>
+            <button id="deleteSelected">Delete</button>
+            <button id="downloadSubmission" class="primary">Export JSON</button>
+          </section>
+
+          <section class="panel-block metrics" id="editorStats">
+            <div><span>Zones</span><strong>0</strong></div>
+            <div><span>Facilities</span><strong>0</strong></div>
+            <div><span>Transit</span><strong>0</strong></div>
+            <div><span>Events</span><strong>0</strong></div>
+          </section>
+        </aside>
+
+        <section class="map-panel">
+          <canvas id="mapCanvas" width="1200" height="900"></canvas>
+        </section>
+
+        <aside class="right-panel">
+          <section class="panel-block">
+            <div class="panel-title">Selection</div>
+            <div id="selectionDetails" class="details">None</div>
+          </section>
+          <section class="panel-block">
+            <div class="panel-title">Layers</div>
+            <label class="check-row"><input type="checkbox" id="layerTerrain" checked> Terrain</label>
+            <label class="check-row"><input type="checkbox" id="layerZones" checked> Zones</label>
+            <label class="check-row"><input type="checkbox" id="layerTransit" checked> Transit</label>
+            <label class="check-row"><input type="checkbox" id="layerEvents" checked> Events</label>
+            <label class="check-row"><input type="checkbox" id="layerGrid"> Grid</label>
+          </section>
+          <section class="panel-block">
+            <div class="panel-title">Submission</div>
+            <textarea id="jsonPreview" spellcheck="false"></textarea>
+          </section>
+        </aside>
+      </section>
+
+      <section id="dashboardView" class="view">
+        <aside class="side-panel">
+          <section class="panel-block">
+            <div class="panel-title">Data</div>
+            <button id="loadDashboardBundled" class="primary">Load bundled reports</button>
+            <label class="file-control">
+              <span>Leaderboard CSV</span>
+              <input id="leaderboardFile" type="file" accept=".csv,text/csv">
+            </label>
+            <label class="file-control">
+              <span>Balance CSV</span>
+              <input id="balanceFile" type="file" accept=".csv,text/csv">
+            </label>
+          </section>
+
+          <section class="panel-block">
+            <div class="panel-title">Compare</div>
+            <label>
+              <span>First</span>
+              <select id="compareA"></select>
+            </label>
+            <label>
+              <span>Second</span>
+              <select id="compareB"></select>
+            </label>
+          </section>
+        </aside>
+
+        <section class="dashboard-grid">
+          <section class="dash-panel span-2">
+            <div class="panel-title">Leaderboard</div>
+            <div id="leaderboardTable" class="table-wrap"></div>
+          </section>
+          <section class="dash-panel">
+            <div class="panel-title">Axis Compare</div>
+            <canvas id="axisChart" width="520" height="340"></canvas>
+          </section>
+          <section class="dash-panel">
+            <div class="panel-title">Grade Spread</div>
+            <canvas id="gradeChart" width="520" height="340"></canvas>
+          </section>
+          <section class="dash-panel span-2">
+            <div class="panel-title">25 Combination Matrix</div>
+            <canvas id="matrixChart" width="1120" height="420"></canvas>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

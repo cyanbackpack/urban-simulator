@@ -18,6 +18,8 @@ Last checked: 2026-06-07
 - [x] Baseline reference submission generator.
 - [x] Leaderboard batch scoring script.
 - [x] 5 terrain x 5 objective balance-test runner.
+- [x] Browser-based polygon editor prototype.
+- [x] Browser-based leaderboard comparison dashboard.
 
 ## Current Verification
 
@@ -53,7 +55,8 @@ Latest balance sweep, seed 3:
 - [ ] Calibrate difficulty multipliers and axis normalization after the first 25-combination sweep.
 - [ ] Add event synergy rules where useful, such as mineral + freight rail + harbor.
 - [ ] Add optional GIS/OSM/DEM data pipeline for real-world map fidelity.
-- [ ] Add web submission and visualization UI.
+- [x] Add web submission and visualization UI.
+- [ ] Connect the web editor directly to local scorer/validator through a backend service.
 
 ## Terrain Fidelity Note
 
